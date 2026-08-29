@@ -27,6 +27,8 @@ services:
       SUPABASE_JWT_ALG: HS256
       SUPABASE_JWT_SECRET: dev-supabase-jwt-secret-change-me
       SUPABASE_JWT_AUD: authenticated
+      # Optional phone-OTP sign-in (ADR-003) — off by default.
+      AUTH_PHONE_OTP: ${AUTH_PHONE_OTP:-false}
       # Adapters default to mock/local. Set AI_PROVIDER=anthropic + ANTHROPIC_API_KEY,
       # or PAYMENTS_PROVIDER=razorpay + the RAZORPAY_* keys, to go live.
       AI_PROVIDER: ${AI_PROVIDER:-mock}
@@ -61,6 +63,7 @@ services:
       # Fill these from your Supabase project (Auth only).
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-https://your-project-ref.supabase.co}
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-your-anon-key}
+      NEXT_PUBLIC_AUTH_PHONE_OTP: ${NEXT_PUBLIC_AUTH_PHONE_OTP:-false}
     volumes:
       - ./frontend:/app
       - /app/node_modules

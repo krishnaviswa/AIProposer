@@ -28,9 +28,12 @@ Not a chat transcript, not a JSON export, not a team tool.
 > The wave-file checkboxes were left unfilled. Falling back to the frozen spec:
 >
 > - **v0 auth = Supabase Auth: email/password (verified) + Google OAuth.** (`mvp-spec.md` §3.1, §13.1)
-> - **No SMS / phone OTP, no authenticator TOTP in v0.** The India +91 SMS rail is an *open decision*,
->   tracked in [`roadmap.md`](roadmap.md) as `blocked-on-decision`. If it is chosen later, only
->   sequence 1 in `architecture-sequences.md` changes; the JWT-verification contract with FastAPI does not.
+> - **Phone OTP is an OPTIONAL method behind a feature flag** (decided 2026-08-29 — S-005, ADR-003).
+>   `AUTH_PHONE_OTP` / `NEXT_PUBLIC_AUTH_PHONE_OTP` default `false` and are `false` in CI, so the
+>   default build is still email + Google only. When on: phone-only accounts are allowed, Supabase
+>   Auth does the SMS send (MSG91 for +91), and only sequence 1 changes — the JWT-verification
+>   contract with FastAPI does not (`users.email` becomes nullable, `users.phone` is added).
+> - **No authenticator TOTP in v0.**
 
 ---
 
@@ -225,7 +228,7 @@ user hits Generate) · `POST /v1/billing/checkout-session` · `POST /v1/billing/
 ### In v0
 
 - FastAPI `/v1`; Next.js web client that speaks only to FastAPI.
-- Supabase Auth (email verified + Google); JWT verification in FastAPI.
+- Supabase Auth (email verified + Google; optional phone OTP behind `AUTH_PHONE_OTP`, off by default — ADR-003); JWT verification in FastAPI.
 - User-owned prices: saved packages and/or hourly rate × hours; single project fee is valid.
 - Split UI: PDF-like preview + section forms. Status `draft` / `sent` / `won` / `lost`.
 - One LLM `generate` + `regenerate`, structured JSON, `max_tokens`, cached system prompt, no streaming.
@@ -242,8 +245,9 @@ user hits Generate) · `POST /v1/billing/checkout-session` · `POST /v1/billing/
 Flutter / any mobile client · Stripe / global `$` checkout · proposal packs & overage · competitor
 compare upload + OCR (v1.1, Pro+) · infographic PNG (v1.1) · general file uploads · seats /
 `workspaces` / "Scale" · Hindi UI or output · authenticator TOTP · SMS / phone OTP rail
-(`blocked-on-decision`) · single-session enforcement · public product rename · live FX conversion at
-checkout · PostHog can land late, is not a launch blocker.
+(`feature-flag` — code exists, off by default; ADR-003) · phone/email account linking ·
+single-session enforcement · public product rename · live FX conversion at checkout · PostHog can
+land late, is not a launch blocker.
 
 ---
 

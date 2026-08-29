@@ -59,8 +59,9 @@ Supabase Postgres, private Storage; Razorpay subscriptions with HMAC-verified id
 amounts *before* the model runs; any money the model returns is stripped. PATCH, PDF, download,
 duplicate, checkout, and webhooks never call the LLM. Flutter and Stripe are out of the v0 picture.
 
-**Auth (v0):** Supabase email/password (verified) + Google. No SMS OTP, no TOTP — see
-[`docs/roadmap.md`](docs/roadmap.md).
+**Auth (v0):** Supabase email/password (verified) + Google. Phone OTP is an optional method behind
+`AUTH_PHONE_OTP` / `NEXT_PUBLIC_AUTH_PHONE_OTP` (default off, off in CI — S-005, ADR-003). No TOTP —
+see [`docs/roadmap.md`](docs/roadmap.md).
 
 ---
 
@@ -80,6 +81,7 @@ duplicate, checkout, and webhooks never call the LLM. Flutter and Stripe are out
 | [`S-002-nextjs-client`](docs/agents/slices/S-002-nextjs-client.md) | 1 Platform skeleton | **Accepted** — Next.js 15 client, 8 Jest tests |
 | [`S-003-live-ai-and-pdf`](docs/agents/slices/S-003-live-ai-and-pdf.md) | 2 AI + money | **Accepted** — live Claude adapter (ADR-002) + cached PDF, 56 pytest tests |
 | [`S-004-razorpay-and-web-money`](docs/agents/slices/S-004-razorpay-and-web-money.md) | 2 AI + money | **Accepted** — Razorpay Orders API + HMAC webhook + web PDF/upgrade, 61 pytest + 12 Jest |
+| [`S-005-phone-otp-login`](docs/agents/slices/S-005-phone-otp-login.md) | 1 Platform skeleton (auth) | **Accepted** — optional phone OTP behind `AUTH_PHONE_OTP` (default off, ADR-003); phone success also funnels through `/auth/callback` |
 | [`S-006-hosted-checkout`](docs/agents/slices/S-006-hosted-checkout.md) | 2 AI + money | **Accepted** — hosted Razorpay Checkout.js on `/billing` + Next.js `/auth/callback` code-exchange route (ADR-004), 28 Jest (61 pytest unchanged); AC 2 / AC 12 have a pre-launch live-key manual step |
 
 `backend/` is the FastAPI service (auth, `/v1/me`, proposals CRUD + quota, Alembic, pytest) with a

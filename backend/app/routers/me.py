@@ -27,6 +27,7 @@ async def _view(db: AsyncSession, user: User) -> MeView:
     return MeView(
         id=user.id,
         email=user.email,
+        phone=user.phone,
         name=user.name,
         quote_currency=user.quote_currency,
         hourly_rate_minor=user.hourly_rate_minor,

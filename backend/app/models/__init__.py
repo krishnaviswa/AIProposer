@@ -77,7 +77,10 @@ class User(Base):
 
     # = Supabase JWT `sub`
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True)
-    email: Mapped[str] = mapped_column(String(320), index=True)
+    # One of email / phone is always set. Phone-only accounts exist when the
+    # optional phone-OTP method is enabled (ADR-003); email is nullable for them.
+    email: Mapped[str | None] = mapped_column(String(320), index=True, nullable=True)
+    phone: Mapped[str | None] = mapped_column(String(32), index=True, nullable=True)
     name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     quote_currency: Mapped[str] = mapped_column(String(3), default=Currency.INR.value)
     hourly_rate_minor: Mapped[int | None] = mapped_column(Integer, nullable=True)

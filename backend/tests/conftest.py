@@ -83,6 +83,7 @@ def make_token(
     sub: str | None = None,
     *,
     email: str | None = None,
+    phone: str | None = None,
     secret: str | None = None,
     aud: str | None = None,
     exp_delta: timedelta = timedelta(hours=1),
@@ -90,13 +91,20 @@ def make_token(
     key=None,
 ) -> str:
     sub = sub or str(uuid.uuid4())
+    # Default to an email identity only when neither identifier is given, so a
+    # caller can mint a phone-only token by passing phone= and leaving email None.
+    if email is None and phone is None:
+        email = f"{sub}@example.com"
     payload = {
         "sub": sub,
-        "email": email or f"{sub}@example.com",
         "aud": aud or SETTINGS.supabase_jwt_aud,
         "exp": datetime.now(timezone.utc) + exp_delta,
         "iat": datetime.now(timezone.utc),
     }
+    if email is not None:
+        payload["email"] = email
+    if phone is not None:
+        payload["phone"] = phone
     return jwt.encode(payload, key or secret or SETTINGS.supabase_jwt_secret, algorithm=alg)
 
 
