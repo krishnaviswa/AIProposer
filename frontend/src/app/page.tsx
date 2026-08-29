@@ -21,7 +21,10 @@ export default function DashboardPage() {
             <h1 className="text-2xl font-semibold">Proposals</h1>
             {me.data && (
               <p className="text-sm text-neutral-500">
-                {me.data.plan.name} · {me.data.usage.used}/{me.data.usage.included} used this period
+                {me.data.plan.name} · {me.data.usage.used}/{me.data.usage.included} used this period ·{" "}
+                <Link href="/billing" className="text-accent underline">
+                  Plan &amp; billing
+                </Link>
               </p>
             )}
           </div>

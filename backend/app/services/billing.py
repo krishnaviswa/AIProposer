@@ -36,6 +36,7 @@ async def create_checkout_session(db: AsyncSession, user: User, plan_id: str) ->
         currency="INR" if plan["rail"] == "inr" else "USD",
         plan_id=plan_id,
         receipt=f"user:{user.id}",
+        notes={"user_id": str(user.id), "plan_id": plan_id},
     )
     return {
         "provider_order_id": order.provider_order_id,
@@ -47,14 +48,16 @@ async def create_checkout_session(db: AsyncSession, user: User, plan_id: str) ->
 
 
 def _user_id_from_event(event: WebhookEventDTO) -> uuid.UUID | None:
-    raw = event.raw or {}
-    ref = raw.get("receipt") or (raw.get("notes") or {}).get("receipt") or ""
-    if isinstance(ref, str) and ref.startswith("user:"):
-        try:
-            return uuid.UUID(ref.split("user:", 1)[1])
-        except ValueError:
-            return None
-    return None
+    notes = event.notes or {}
+    candidate = notes.get("user_id")
+    if not candidate:
+        ref = notes.get("receipt") or ""
+        if isinstance(ref, str) and ref.startswith("user:"):
+            candidate = ref.split("user:", 1)[1]
+    try:
+        return uuid.UUID(str(candidate)) if candidate else None
+    except ValueError:
+        return None
 
 
 async def handle_webhook(db: AsyncSession, body: bytes, signature: str) -> dict:

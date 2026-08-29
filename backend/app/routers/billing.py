@@ -1,5 +1,6 @@
-"""Checkout session + webhook (mvp-spec.md §7). No LLM, no quota. Wave 3 = mock
-payment adapter; the webhook path (HMAC + idempotency + anchor) is real."""
+"""Checkout session + webhook (mvp-spec.md §7). No LLM, no quota. The webhook
+path (HMAC verify + WebhookEvents idempotency + period anchor) is identical for
+the mock and the live Razorpay provider."""
 
 from __future__ import annotations
 
@@ -28,7 +29,8 @@ async def checkout_session(
 async def webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    x_signature: str = Header(default=""),
+    x_razorpay_signature: str = Header(default="", alias="X-Razorpay-Signature"),
+    x_signature: str = Header(default="", alias="X-Signature"),
 ) -> dict:
     body = await request.body()
-    return await handle_webhook(db, body, x_signature)
+    return await handle_webhook(db, body, x_razorpay_signature or x_signature)

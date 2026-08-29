@@ -20,14 +20,14 @@ class MockPaymentProvider:
         self.key_id = settings.razorpay_key_id or "rzp_test_mock"
 
     async def create_order(
-        self, *, amount_paise: int, currency: str, plan_id: str, receipt: str
+        self, *, amount_paise: int, currency: str, plan_id: str, receipt: str, notes: dict[str, str]
     ) -> ProviderOrder:
         return ProviderOrder(
             provider_order_id=f"order_mock_{uuid.uuid4().hex[:16]}",
             key_id=self.key_id,
             amount_paise=amount_paise,
             currency=currency,
-            extra={"receipt": receipt, "plan_id": plan_id},
+            extra={"receipt": receipt, "notes": notes},
         )
 
     def verify_webhook(self, body: bytes, signature: str) -> WebhookEvent | None:
@@ -38,12 +38,16 @@ class MockPaymentProvider:
         except (ValueError, UnicodeDecodeError):
             return None
         event = str(payload.get("event") or "")
+        notes = payload.get("notes") or {}
+        if payload.get("receipt"):
+            notes = {**notes, "receipt": payload["receipt"]}
         return WebhookEvent(
             event=event,
             provider_event_id=str(payload.get("id") or payload.get("event_id") or ""),
             provider_order_id=payload.get("order_id"),
             provider_subscription_id=payload.get("subscription_id"),
-            plan_id=payload.get("plan_id"),
+            plan_id=payload.get("plan_id") or notes.get("plan_id"),
+            notes=notes,
             paid=event in {"order.paid", "subscription.charged", "subscription.activated"},
             raw=payload,
         )

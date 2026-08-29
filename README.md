@@ -71,7 +71,7 @@ duplicate, checkout, and webhooks never call the LLM. Flutter and Stripe are out
 | 1 | Architecture pack — `docs/architecture*.md`, `docs/ai-touchpoints.md` | **done** |
 | 2 | Cursor↔Claude parity + PM→Architect→Builder→Tester cycle + roadmap seed (`S-000`) | **done** |
 | 3 | Platform skeleton — Supabase JWT verify, `/v1/me`, proposals CRUD, PATCH allowlist, quota counter, mock adapters (LLM dark) + Next.js client | **done (`S-001` backend + `S-002` web)** |
-| 4 | AI generate + regenerate + cached PDF + Razorpay | **in progress — `S-003` (live Claude + PDF) done · `S-004` (Razorpay + web wiring) next** |
+| 4 | AI generate + regenerate + cached PDF + Razorpay | **done (`S-003` live Claude + PDF · `S-004` Razorpay + web wiring)** |
 
 | Slice | Phase | Status |
 |---|---|---|
@@ -79,13 +79,19 @@ duplicate, checkout, and webhooks never call the LLM. Flutter and Stripe are out
 | [`S-001-platform-skeleton`](docs/agents/slices/S-001-platform-skeleton.md) | 1 Platform skeleton | **Accepted** — FastAPI `/v1`, 42 pytest tests |
 | [`S-002-nextjs-client`](docs/agents/slices/S-002-nextjs-client.md) | 1 Platform skeleton | **Accepted** — Next.js 15 client, 8 Jest tests |
 | [`S-003-live-ai-and-pdf`](docs/agents/slices/S-003-live-ai-and-pdf.md) | 2 AI + money | **Accepted** — live Claude adapter (ADR-002) + cached PDF, 56 pytest tests |
+| [`S-004-razorpay-and-web-money`](docs/agents/slices/S-004-razorpay-and-web-money.md) | 2 AI + money | **Accepted** — Razorpay Orders API + HMAC webhook + web PDF/upgrade, 61 pytest + 12 Jest |
 
 `backend/` is the FastAPI service (auth, `/v1/me`, proposals CRUD + quota, Alembic, pytest) with a
-**live Claude adapter** (`AI_PROVIDER=anthropic`, `claude-haiku-4-5` per ADR-002) and a **server-side
-cached PDF** (`reportlab`, watermarked on Free). `AI_PROVIDER=mock` + a stubbed SDK stay the default
-and the only thing CI runs — no live keys anywhere. `frontend/` is the Next.js 15 client (Supabase
-auth + middleware guard, one API module, sign-in / dashboard / settings / new-proposal / split
-editor, Jest). Razorpay + the web wiring for real PDF download and checkout land in `S-004`.
+**live Claude adapter** (`AI_PROVIDER=anthropic`, `claude-haiku-4-5` per ADR-002), a **server-side
+cached PDF** (`reportlab`, watermarked on Free), and a **live Razorpay rail** (`PAYMENTS_PROVIDER=razorpay`
+— Orders API + HMAC webhook). `AI_PROVIDER=mock` + `PAYMENTS_PROVIDER=mock` + stubbed SDKs stay the
+default and the only thing CI runs — no live keys anywhere. `frontend/` is the Next.js 15 client
+(Supabase auth + middleware guard, one API module, sign-in / dashboard / settings / new-proposal /
+split editor / `/billing`, Jest) with real PDF download and an upgrade → Razorpay checkout flow.
+
+**Wave 4 complete** — the two v0 AI hops, the cached PDF, and the Razorpay rail are all live behind
+their adapters; `mock`/stub remain the default. Deferred finishing touches (hosted checkout.js,
+signed storage URLs, the model bake-off) are in [`docs/roadmap.md`](docs/roadmap.md).
 
 ### Run it
 

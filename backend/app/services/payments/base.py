@@ -22,6 +22,8 @@ class WebhookEvent:
     provider_order_id: str | None
     provider_subscription_id: str | None
     plan_id: str | None
+    #: user_id / plan_id / receipt echoed back from the order we created
+    notes: dict[str, Any]
     paid: bool
     raw: dict[str, Any] = field(default_factory=dict)
 
@@ -30,7 +32,7 @@ class PaymentProvider(Protocol):
     name: str
 
     async def create_order(
-        self, *, amount_paise: int, currency: str, plan_id: str, receipt: str
+        self, *, amount_paise: int, currency: str, plan_id: str, receipt: str, notes: dict[str, str]
     ) -> ProviderOrder: ...
 
     def verify_webhook(self, body: bytes, signature: str) -> WebhookEvent | None: ...

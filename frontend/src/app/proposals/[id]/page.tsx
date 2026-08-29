@@ -6,7 +6,9 @@ import { useState } from "react";
 import { Nav } from "@/components/Nav";
 import { PreviewPane } from "@/components/PreviewPane";
 import { SectionForms } from "@/components/SectionForms";
-import { api, ApiError } from "@/lib/api";
+import Link from "next/link";
+
+import { api, ApiError, apiOrigin } from "@/lib/api";
 import { useResource } from "@/lib/useApi";
 import type { MeView, ProposalView } from "@/lib/types";
 
@@ -16,6 +18,7 @@ export default function ProposalEditorPage() {
   const me = useResource<MeView>(() => api.getMe());
   const proposal = useResource<ProposalView>(() => api.getProposal(id), [id]);
   const [banner, setBanner] = useState<string | null>(null);
+  const [overQuota, setOverQuota] = useState(false);
 
   async function patch(body: Record<string, unknown>) {
     try {
@@ -28,19 +31,36 @@ export default function ProposalEditorPage() {
 
   async function regenerate() {
     setBanner(null);
+    setOverQuota(false);
     try {
       const updated = await api.regenerate(id);
       proposal.setData(updated);
       me.refetch();
     } catch (err) {
       const e = err as ApiError;
-      setBanner(e.status === 402 ? "Plan limit reached for this period." : e.message);
+      if (e.status === 402) {
+        setOverQuota(true);
+        setBanner("You've hit your plan limit for this period.");
+      } else {
+        setBanner(e.message);
+      }
     }
   }
 
   async function duplicate() {
     const copy = await api.duplicate(id);
     router.push(`/proposals/${copy.id}`);
+  }
+
+  async function downloadPdf() {
+    setBanner(null);
+    try {
+      const { pdf_url } = await api.getPdf(id);
+      const href = pdf_url.startsWith("http") ? pdf_url : `${apiOrigin()}${pdf_url}`;
+      window.open(href, "_blank", "noopener");
+    } catch (err) {
+      setBanner((err as ApiError).message);
+    }
   }
 
   if (proposal.loading) return <Loading />;
@@ -63,17 +83,24 @@ export default function ProposalEditorPage() {
             <button onClick={duplicate} className="rounded border px-3 py-1.5">
               Duplicate
             </button>
-            <button
-              onClick={() => setBanner("PDF export arrives in Wave 4.")}
-              className="rounded border px-3 py-1.5 opacity-60"
-            >
+            <button onClick={downloadPdf} className="rounded border px-3 py-1.5">
               Download PDF
             </button>
           </div>
         </div>
 
         {banner && (
-          <p className="mb-4 rounded bg-neutral-100 px-3 py-2 text-sm text-neutral-700">{banner}</p>
+          <p className="mb-4 rounded bg-neutral-100 px-3 py-2 text-sm text-neutral-700">
+            {banner}
+            {overQuota && (
+              <>
+                {" "}
+                <Link href="/billing" className="font-medium text-accent underline">
+                  Upgrade
+                </Link>
+              </>
+            )}
+          </p>
         )}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">

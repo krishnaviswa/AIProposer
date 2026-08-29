@@ -61,11 +61,20 @@ export const api = {
     apiFetch<ProposalView>(`/proposals/${id}/regenerate`, { method: "POST" }),
   duplicate: (id: string) =>
     apiFetch<ProposalView>(`/proposals/${id}/duplicate`, { method: "POST" }),
+  getPdf: (id: string) => apiFetch<{ pdf_url: string }>(`/proposals/${id}/pdf`),
   checkout: (plan_id: string) =>
-    apiFetch<{ provider_order_id: string; amount_paise: number; currency: string }>(
-      "/billing/checkout-session",
-      { method: "POST", body: JSON.stringify({ plan_id }) },
-    ),
+    apiFetch<{
+      provider_order_id: string;
+      key_id: string;
+      amount_paise: number;
+      currency: string;
+      plan_id: string;
+    }>("/billing/checkout-session", { method: "POST", body: JSON.stringify({ plan_id }) }),
 };
+
+/** The API base without the trailing `/v1`, for resolving relative asset URLs (PDFs). */
+export function apiOrigin(): string {
+  return BASE.replace(/\/v1\/?$/, "");
+}
 
 export { BASE as API_BASE_URL };

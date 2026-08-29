@@ -1,4 +1,4 @@
-import { apiFetch, API_BASE_URL, ApiError } from "@/lib/api";
+import { apiFetch, api, apiOrigin, API_BASE_URL, ApiError } from "@/lib/api";
 
 describe("apiFetch", () => {
   const fetchMock = jest.fn();
@@ -36,5 +36,21 @@ describe("apiFetch", () => {
       status: 402,
     });
     expect(new ApiError(402, "x")).toBeInstanceOf(Error);
+  });
+
+  it("getPdf hits the proposal pdf path and checkout posts the plan", async () => {
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({ pdf_url: "/uploads/x.pdf" }) });
+    await api.getPdf("abc");
+    expect(fetchMock.mock.calls[0][0]).toBe(`${API_BASE_URL}/proposals/abc/pdf`);
+
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => ({}) });
+    await api.checkout("starter_inr");
+    const [url, init] = fetchMock.mock.calls[1];
+    expect(url).toBe(`${API_BASE_URL}/billing/checkout-session`);
+    expect(JSON.parse(init.body)).toEqual({ plan_id: "starter_inr" });
+  });
+
+  it("apiOrigin strips the trailing /v1", () => {
+    expect(apiOrigin()).toBe("http://localhost:8000");
   });
 });

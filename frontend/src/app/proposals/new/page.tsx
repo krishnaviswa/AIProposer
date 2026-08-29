@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -28,6 +29,7 @@ export default function NewProposalPage() {
   const [fixedLabel, setFixedLabel] = useState("Project fee");
   const [fixedAmount, setFixedAmount] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [overQuota, setOverQuota] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function submit(e: React.FormEvent) {
@@ -54,8 +56,12 @@ export default function NewProposalPage() {
       router.push(`/proposals/${created.id}`);
     } catch (err) {
       const e = err as ApiError;
-      if (e.status === 402) setError("You've hit your plan limit for this period.");
-      else setError(e.message);
+      if (e.status === 402) {
+        setOverQuota(true);
+        setError("You've hit your plan limit for this period.");
+      } else {
+        setError(e.message);
+      }
       setBusy(false);
     }
   }
@@ -217,7 +223,19 @@ export default function NewProposalPage() {
             )}
           </fieldset>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && (
+            <p className="text-sm text-red-600">
+              {error}
+              {overQuota && (
+                <>
+                  {" "}
+                  <Link href="/billing" className="font-medium underline">
+                    Upgrade your plan
+                  </Link>
+                </>
+              )}
+            </p>
+          )}
           <button
             type="submit"
             disabled={busy}
