@@ -70,31 +70,37 @@ duplicate, checkout, and webhooks never call the LLM. Flutter and Stripe are out
 |---|---|---|
 | 1 | Architecture pack — `docs/architecture*.md`, `docs/ai-touchpoints.md` | **done** |
 | 2 | Cursor↔Claude parity + PM→Architect→Builder→Tester cycle + roadmap seed (`S-000`) | **done** |
-| 3 | Platform skeleton — Supabase JWT verify, `/v1/me`, proposals CRUD, PATCH allowlist, quota counter, mock adapters (LLM dark) | **backend done (`S-001`)** · Next.js client → `S-002` |
+| 3 | Platform skeleton — Supabase JWT verify, `/v1/me`, proposals CRUD, PATCH allowlist, quota counter, mock adapters (LLM dark) + Next.js client | **done (`S-001` backend + `S-002` web)** |
 | 4 | AI generate + regenerate + cached PDF + Razorpay | not started |
 
 | Slice | Phase | Status |
 |---|---|---|
 | [`S-000-agent-bootstrap`](docs/agents/slices/S-000-agent-bootstrap.md) | 0 Bootstrap | **Accepted** |
-| [`S-001-platform-skeleton`](docs/agents/slices/S-001-platform-skeleton.md) | 1 Platform skeleton | **Accepted** — FastAPI `/v1`, 42 tests |
-| `S-002` — Next.js client | 1 Platform skeleton | not started |
+| [`S-001-platform-skeleton`](docs/agents/slices/S-001-platform-skeleton.md) | 1 Platform skeleton | **Accepted** — FastAPI `/v1`, 42 pytest tests |
+| [`S-002-nextjs-client`](docs/agents/slices/S-002-nextjs-client.md) | 1 Platform skeleton | **Accepted** — Next.js 15 client, 8 Jest tests |
 
-`backend/` now holds the FastAPI skeleton (auth, `/v1/me`, proposals CRUD + quota, mock adapters,
-Alembic, pytest). The **AI adapter is a deterministic mock** — `AI_PROVIDER != mock` fails at boot;
-real inference + PDF + Razorpay are Wave 4. `frontend/` is still just its `CLAUDE.md` contract (`S-002`).
+`backend/` is the FastAPI skeleton (auth, `/v1/me`, proposals CRUD + quota, mock adapters, Alembic,
+pytest). `frontend/` is the Next.js 15 client (Supabase auth + middleware guard, one API module,
+sign-in / dashboard / settings / new-proposal / split editor, Jest). The **AI adapter is a
+deterministic mock** — `AI_PROVIDER != mock` fails at boot; real inference + PDF + Razorpay are Wave 4.
 
-### Run the backend
+### Run it
 
 ```bash
 docker compose up --build
 ```
 
-or, without Docker:
+Backend `http://localhost:8000/docs` · Web `http://localhost:3000` (needs `NEXT_PUBLIC_SUPABASE_*`
+set for auth). Without Docker:
 
 ```bash
+# backend
 cd backend && pip install -r requirements.txt && cp .env.example .env
 PYTHONPATH=. python -m alembic upgrade head && PYTHONPATH=. python scripts/seed.py
-PYTHONPATH=. uvicorn app.main:app --reload   # http://localhost:8000/docs
+PYTHONPATH=. uvicorn app.main:app --reload
+
+# frontend (separate shell)
+cd frontend && npm install && cp .env.example .env.local && npm run dev
 ```
 
-Tests: `cd backend && PYTHONPATH=. python -m pytest -q`
+Tests: `cd backend && PYTHONPATH=. python -m pytest -q` · `cd frontend && npm test`

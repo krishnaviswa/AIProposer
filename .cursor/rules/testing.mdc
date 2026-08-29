@@ -46,4 +46,6 @@ Do not add Cypress/Selenium.
 ## CI
 
 - `agent-config-sync.yml` runs the parity check on PRs (see workflow file for enablement state).
-- App test workflows (added in Wave 3) run the cheap pack; they never use live keys.
+- `backend-tests.yml` (S-001) runs pytest vs a throwaway Postgres; `frontend-tests.yml` (S-002)
+  runs `typecheck` + `jest` + `next build`. Neither uses a live LLM, live Razorpay, or a real
+  Supabase project.

@@ -4,7 +4,10 @@
 > half of `.cursor/rules/testing.mdc`. Keep in sync — see the parity table in the root
 > [`CLAUDE.md`](../CLAUDE.md).
 
-> No frontend code exists yet — Wave 3 (Phase 1) creates it. This file is the standing contract.
+> The Next.js client landed in slice **S-002** (Wave 3): App Router, `@supabase/ssr` auth +
+> middleware guard, `src/lib/api.ts` (the only backend caller), sign-in / dashboard / settings /
+> new-proposal / split editor, Jest + RTL. This file is the standing contract, not a status page —
+> current build state is in `README.md` + the latest slice under `docs/agents/slices/`.
 
 ## Boundary
 

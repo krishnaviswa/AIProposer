@@ -4,9 +4,10 @@
 > of `.cursor/rules/testing.mdc`. Keep in sync — see the parity table in the root
 > [`CLAUDE.md`](../CLAUDE.md).
 
-> No backend code exists yet — Wave 3 (Phase 1) creates it. This file is the standing contract for
-> when it does. `app/services/ai/` and `app/services/payments|storage|email/` gain their own nested
-> `CLAUDE.md` in Wave 3 when the adapter code lands (add the new pairs to `SYNC_GROUPS` then).
+> The skeleton landed in slice **S-001** (Wave 3). This file is the standing contract, not a status
+> page — current build state is in `README.md` + the latest slice under `docs/agents/slices/`.
+> The AI adapter is **mock only** until Wave 4. If `app/services/{ai,payments}/` grow enough to
+> warrant it, split this file into a nested `app/services/CLAUDE.md` and add the pair to `SYNC_GROUPS`.
 
 ## Layering
 

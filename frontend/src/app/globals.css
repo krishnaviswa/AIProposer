@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-neutral-50 text-ink;
+}
+
+.prose-preview h2 {
+  @apply text-lg font-semibold mt-6 mb-2;
+}
+.prose-preview ul {
+  @apply list-disc pl-5 space-y-1;
+}
+.prose-preview p {
+  @apply my-2 leading-relaxed;
+}

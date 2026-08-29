@@ -7,6 +7,8 @@ alwaysApply: false
 # Frontend rules (Next.js)
 
 Mirrors `frontend/CLAUDE.md`. Keep both in sync (parity table in root `CLAUDE.md`).
+The Next.js client landed in slice **S-002** (Wave 3). Current build state lives in `README.md` +
+the latest slice, not here.
 
 ## Boundary
 
