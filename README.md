@@ -70,12 +70,31 @@ duplicate, checkout, and webhooks never call the LLM. Flutter and Stripe are out
 |---|---|---|
 | 1 | Architecture pack — `docs/architecture*.md`, `docs/ai-touchpoints.md` | **done** |
 | 2 | Cursor↔Claude parity + PM→Architect→Builder→Tester cycle + roadmap seed (`S-000`) | **done** |
-| 3 | Platform skeleton — Supabase JWT verify, `/v1/me`, proposals CRUD, PATCH allowlist, quota counter, mock adapters (LLM dark) | not started |
+| 3 | Platform skeleton — Supabase JWT verify, `/v1/me`, proposals CRUD, PATCH allowlist, quota counter, mock adapters (LLM dark) | **backend done (`S-001`)** · Next.js client → `S-002` |
 | 4 | AI generate + regenerate + cached PDF + Razorpay | not started |
 
 | Slice | Phase | Status |
 |---|---|---|
 | [`S-000-agent-bootstrap`](docs/agents/slices/S-000-agent-bootstrap.md) | 0 Bootstrap | **Accepted** |
+| [`S-001-platform-skeleton`](docs/agents/slices/S-001-platform-skeleton.md) | 1 Platform skeleton | **Accepted** — FastAPI `/v1`, 42 tests |
+| `S-002` — Next.js client | 1 Platform skeleton | not started |
 
-No application code yet — Waves 1–2 are documentation and tooling only. `backend/` and `frontend/`
-currently hold only their `CLAUDE.md` contracts; Wave 3 fills them.
+`backend/` now holds the FastAPI skeleton (auth, `/v1/me`, proposals CRUD + quota, mock adapters,
+Alembic, pytest). The **AI adapter is a deterministic mock** — `AI_PROVIDER != mock` fails at boot;
+real inference + PDF + Razorpay are Wave 4. `frontend/` is still just its `CLAUDE.md` contract (`S-002`).
+
+### Run the backend
+
+```bash
+docker compose up --build
+```
+
+or, without Docker:
+
+```bash
+cd backend && pip install -r requirements.txt && cp .env.example .env
+PYTHONPATH=. python -m alembic upgrade head && PYTHONPATH=. python scripts/seed.py
+PYTHONPATH=. uvicorn app.main:app --reload   # http://localhost:8000/docs
+```
+
+Tests: `cd backend && PYTHONPATH=. python -m pytest -q`

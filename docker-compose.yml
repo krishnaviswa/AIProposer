@@ -1,0 +1,52 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aiproposer
+      POSTGRES_PASSWORD: aiproposer
+      POSTGRES_DB: aiproposer
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aiproposer"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://aiproposer:aiproposer@postgres:5432/aiproposer
+      DEBUG: "true"
+      CORS_ORIGINS: http://localhost:3000
+      # Supabase Auth — FastAPI only verifies the JWT (ADR-001).
+      SUPABASE_JWT_ALG: HS256
+      SUPABASE_JWT_SECRET: dev-supabase-jwt-secret-change-me
+      SUPABASE_JWT_AUD: authenticated
+      # Every adapter mock/local in Wave 3. Real ones land in Wave 4.
+      AI_PROVIDER: mock
+      PAYMENTS_PROVIDER: mock
+      STORAGE_PROVIDER: local
+      EMAIL_PROVIDER: mock
+      RAZORPAY_WEBHOOK_SECRET: dev-webhook-secret-change-me
+      STORAGE_LOCAL_PATH: /app/uploads
+    volumes:
+      - ./backend:/app
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "python -m alembic upgrade head
+      && PYTHONPATH=. python scripts/seed.py
+      && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  # frontend: added in slice S-002 (Next.js client).
+
+volumes:
+  postgres_data:
+  uploads_data:
