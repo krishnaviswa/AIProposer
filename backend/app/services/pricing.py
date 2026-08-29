@@ -15,6 +15,17 @@ from fastapi import HTTPException, status
 from app.models import Package, PricingMode, User
 
 
+_CURRENCY_SYMBOL = {"USD": "$", "INR": "₹", "EUR": "€", "GBP": "£"}
+
+
+def money(amount_minor: int, currency: str) -> str:
+    """Minor units -> a display string. Shared by the PDF renderer."""
+    major = amount_minor / 100
+    sym = _CURRENCY_SYMBOL.get(currency, currency + " ")
+    text = f"{major:,.2f}" if major % 1 else f"{int(major):,}"
+    return f"{sym}{text}"
+
+
 @dataclass
 class PricingLine:
     label: str

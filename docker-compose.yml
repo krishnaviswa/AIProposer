@@ -27,12 +27,17 @@ services:
       SUPABASE_JWT_ALG: HS256
       SUPABASE_JWT_SECRET: dev-supabase-jwt-secret-change-me
       SUPABASE_JWT_AUD: authenticated
-      # Every adapter mock/local in Wave 3. Real ones land in Wave 4.
-      AI_PROVIDER: mock
-      PAYMENTS_PROVIDER: mock
+      # Adapters default to mock/local. Set AI_PROVIDER=anthropic + ANTHROPIC_API_KEY,
+      # or PAYMENTS_PROVIDER=razorpay + the RAZORPAY_* keys, to go live.
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-claude-haiku-4-5}
+      PAYMENTS_PROVIDER: ${PAYMENTS_PROVIDER:-mock}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-dev-webhook-secret-change-me}
       STORAGE_PROVIDER: local
       EMAIL_PROVIDER: mock
-      RAZORPAY_WEBHOOK_SECRET: dev-webhook-secret-change-me
       STORAGE_LOCAL_PATH: /app/uploads
     volumes:
       - ./backend:/app

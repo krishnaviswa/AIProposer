@@ -71,18 +71,21 @@ duplicate, checkout, and webhooks never call the LLM. Flutter and Stripe are out
 | 1 | Architecture pack — `docs/architecture*.md`, `docs/ai-touchpoints.md` | **done** |
 | 2 | Cursor↔Claude parity + PM→Architect→Builder→Tester cycle + roadmap seed (`S-000`) | **done** |
 | 3 | Platform skeleton — Supabase JWT verify, `/v1/me`, proposals CRUD, PATCH allowlist, quota counter, mock adapters (LLM dark) + Next.js client | **done (`S-001` backend + `S-002` web)** |
-| 4 | AI generate + regenerate + cached PDF + Razorpay | not started |
+| 4 | AI generate + regenerate + cached PDF + Razorpay | **in progress — `S-003` (live Claude + PDF) done · `S-004` (Razorpay + web wiring) next** |
 
 | Slice | Phase | Status |
 |---|---|---|
 | [`S-000-agent-bootstrap`](docs/agents/slices/S-000-agent-bootstrap.md) | 0 Bootstrap | **Accepted** |
 | [`S-001-platform-skeleton`](docs/agents/slices/S-001-platform-skeleton.md) | 1 Platform skeleton | **Accepted** — FastAPI `/v1`, 42 pytest tests |
 | [`S-002-nextjs-client`](docs/agents/slices/S-002-nextjs-client.md) | 1 Platform skeleton | **Accepted** — Next.js 15 client, 8 Jest tests |
+| [`S-003-live-ai-and-pdf`](docs/agents/slices/S-003-live-ai-and-pdf.md) | 2 AI + money | **Accepted** — live Claude adapter (ADR-002) + cached PDF, 56 pytest tests |
 
-`backend/` is the FastAPI skeleton (auth, `/v1/me`, proposals CRUD + quota, mock adapters, Alembic,
-pytest). `frontend/` is the Next.js 15 client (Supabase auth + middleware guard, one API module,
-sign-in / dashboard / settings / new-proposal / split editor, Jest). The **AI adapter is a
-deterministic mock** — `AI_PROVIDER != mock` fails at boot; real inference + PDF + Razorpay are Wave 4.
+`backend/` is the FastAPI service (auth, `/v1/me`, proposals CRUD + quota, Alembic, pytest) with a
+**live Claude adapter** (`AI_PROVIDER=anthropic`, `claude-haiku-4-5` per ADR-002) and a **server-side
+cached PDF** (`reportlab`, watermarked on Free). `AI_PROVIDER=mock` + a stubbed SDK stay the default
+and the only thing CI runs — no live keys anywhere. `frontend/` is the Next.js 15 client (Supabase
+auth + middleware guard, one API module, sign-in / dashboard / settings / new-proposal / split
+editor, Jest). Razorpay + the web wiring for real PDF download and checkout land in `S-004`.
 
 ### Run it
 

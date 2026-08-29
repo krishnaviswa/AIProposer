@@ -76,11 +76,21 @@ async def test_duplicate_clones_without_model_call_or_quota(client, auth):
     assert me["usage"]["used"] == 1  # duplicate did not burn quota
 
 
-async def test_pdf_is_stubbed(client, auth):
+async def test_pdf_renders_and_is_cached(client, auth):
     p = await _one_proposal(client, auth["headers"])
-    r = await client.get(f"/v1/proposals/{p['id']}/pdf", headers=auth["headers"])
-    assert r.status_code == 501
-    assert r.json()["detail"]["error"] == "pdf_not_implemented"
+    r1 = await client.get(f"/v1/proposals/{p['id']}/pdf", headers=auth["headers"])
+    assert r1.status_code == 200
+    assert r1.json()["pdf_url"].endswith(f"{p['id']}.pdf")
 
+    # No quota consumed by the PDF path.
     me = (await client.get("/v1/me", headers=auth["headers"])).json()
     assert me["usage"]["used"] == 1
+
+    # PATCH invalidates the cache; the next hit re-renders (still 200).
+    await client.patch(
+        f"/v1/proposals/{p['id']}",
+        headers=auth["headers"],
+        json={"client_name": "Renamed"},
+    )
+    r2 = await client.get(f"/v1/proposals/{p['id']}/pdf", headers=auth["headers"])
+    assert r2.status_code == 200

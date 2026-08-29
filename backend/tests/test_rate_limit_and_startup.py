@@ -6,7 +6,7 @@ import pytest
 
 from app.services.ai import REGISTERED_PROVIDERS, get_ai_provider, validate_startup_config
 from app.services.ai.mock import MockAIProvider
-from tests.helpers import set_packages
+from tests.helpers import set_packages  # noqa: F401 (used below)
 
 
 async def test_generate_is_rate_limited(client, auth):
@@ -46,16 +46,25 @@ async def test_generate_is_rate_limited(client, auth):
     assert statuses.count(201) <= 10  # limiter capped the successes
 
 
-def test_only_mock_ai_is_registered():
-    assert REGISTERED_PROVIDERS == ("mock",)
+def test_mock_is_the_default_ai_provider():
+    assert "mock" in REGISTERED_PROVIDERS
     assert isinstance(get_ai_provider(), MockAIProvider)
 
 
-def test_non_mock_ai_provider_fails_startup(monkeypatch):
+def test_unregistered_ai_provider_fails_startup(monkeypatch):
     from app.config import get_settings
 
     s = get_settings()
     monkeypatch.setattr(s, "ai_provider", "openai")
-    with pytest.raises(RuntimeError) as exc:
+    with pytest.raises(RuntimeError, match="not registered"):
         validate_startup_config()
-    assert "Wave 4" in str(exc.value)
+
+
+def test_anthropic_provider_requires_api_key(monkeypatch):
+    from app.config import get_settings
+
+    s = get_settings()
+    monkeypatch.setattr(s, "ai_provider", "anthropic")
+    monkeypatch.setattr(s, "anthropic_api_key", "")
+    with pytest.raises(RuntimeError, match="ANTHROPIC_API_KEY"):
+        validate_startup_config()

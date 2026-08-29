@@ -10,10 +10,14 @@ see the v0 AI allowlist in [`ai-touchpoints.md`](ai-touchpoints.md)).
 Participant legend: **U** freelancer (browser) · **W** Next.js · **A** FastAPI `/v1` ·
 **Auth** Supabase Auth · **DB** Postgres · **LLM** LLM adapter · **S** private storage · **Pay** Razorpay.
 
-> **Build note (Wave 3 / slice S-001):** the platform skeleton wires these journeys with the LLM
-> adapter as a deterministic **`MockAIProvider`** (sequences 3 & 7) and `pdf_url` stubbed (sequence 5).
-> There is **zero production AI hop** in Wave 3 — `AI_PROVIDER != mock` fails at boot. The real
-> provider, real prompt, and real PDF render land in Wave 4. `ai-touchpoints.md` is unchanged.
+> **Build note:**
+> - **Wave 3 (S-001/S-002):** wired with the LLM adapter as a deterministic `MockAIProvider` and
+>   `pdf_url` stubbed — zero production AI hop.
+> - **Wave 4 (S-003):** the real Claude adapter (`AI_PROVIDER=anthropic`, ADR-002) is live at
+>   sequences 3 & 7; sequence 5 now renders a real cached PDF (`reportlab`, watermark on Free,
+>   invalidated by PATCH). `mock` / stub remain the default and the only thing CI exercises.
+>   `AI_PROVIDER` and `PAYMENTS_PROVIDER` still validate at boot. `ai-touchpoints.md` is unchanged —
+>   the two AI hops and their rules are exactly as drawn.
 
 ---
 

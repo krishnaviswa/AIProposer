@@ -36,15 +36,23 @@ class Settings(BaseSettings):
     # JWKS key-set cache lifetime (RS256 path).
     supabase_jwks_cache_seconds: int = 600
 
-    # --- Adapters: every one defaults to a no-network mock/local impl ---
-    ai_provider: str = "mock"          # real providers land in Wave 4
-    payments_provider: str = "mock"    # real Razorpay lands in Wave 4
+    # --- Adapters: default to a no-network mock/local impl; opt in per env ---
+    ai_provider: str = "mock"          # "mock" | "anthropic"
+    payments_provider: str = "mock"    # "mock" | "razorpay"
     storage_provider: Literal["local"] = "local"
     email_provider: str = "mock"
+
+    # Claude LLM (ADR-002). Model is a mid-tier default per mvp-spec.md §4 —
+    # the final pick comes from the §16 ~20-brief benchmark (roadmap: model bake-off).
+    anthropic_api_key: str = ""
+    ai_model: str = "claude-haiku-4-5"
+    ai_max_tokens: int = 2000          # mvp-spec.md §4 output cap
+    ai_timeout_seconds: float = 30.0
 
     razorpay_key_id: str = ""
     razorpay_key_secret: str = ""
     razorpay_webhook_secret: str = "dev-webhook-secret-change-me"
+    razorpay_api_base: str = "https://api.razorpay.com/v1"
 
     storage_local_path: str = "./uploads"
 

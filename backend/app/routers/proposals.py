@@ -1,8 +1,8 @@
-"""Proposals CRUD + generate/regenerate/duplicate + PDF stub.
+"""Proposals CRUD + generate/regenerate/duplicate + cached PDF.
 
-Generate & regenerate are the only endpoints that touch the AI port (a mock in
-Wave 3). PATCH / list / detail / duplicate / pdf never call it and never consume
-quota (docs/ai-touchpoints.md).
+Generate & regenerate are the ONLY endpoints that touch the AI port. PATCH /
+list / detail / duplicate / pdf never call it and never consume quota
+(docs/ai-touchpoints.md).
 
 NOTE: no `from __future__ import annotations` here on purpose — slowapi's
 `@limiter.limit` wraps the handler, and FastAPI then resolves string
@@ -11,7 +11,6 @@ Real annotation objects avoid that.
 """
 
 import uuid
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
@@ -25,6 +24,8 @@ from app.models import Proposal, ProposalStatus, User
 from app.schemas import ProposalCreate, ProposalPatch, ProposalView
 from app.services.ai.base import AIGenerationError
 from app.services.generation import GenerationInputs, run_generation
+from app.services.pdf import render_proposal_pdf
+from app.services.storage import get_storage_provider
 
 router = APIRouter(prefix="/proposals", tags=["proposals"])
 
@@ -177,10 +178,26 @@ async def duplicate_proposal(
 
 
 @router.get("/{proposal_id}/pdf")
-async def get_pdf(proposal: Proposal = Depends(get_owned_proposal)) -> dict:
-    # Wave 3 stub. Real server-side rendering + signed URL is Wave 4.
-    # No LLM, no quota.
-    raise HTTPException(
-        status.HTTP_501_NOT_IMPLEMENTED,
-        detail={"error": "pdf_not_implemented", "hint": "Server-side PDF rendering lands in Wave 4."},
-    )
+async def get_pdf(
+    proposal: Proposal = Depends(get_owned_proposal),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Render-from-structured-data, cached. No LLM, no quota (docs/ai-touchpoints.md).
+    Cache miss -> render + store + set pdf_url. Cache hit -> fresh signed URL only.
+    PATCH nulls pdf_url, so an edited proposal re-renders on the next hit."""
+    if not (proposal.proposal_json or {}).get("executive_summary"):
+        raise HTTPException(status.HTTP_409_CONFLICT, "proposal has not been generated yet")
+
+    storage = get_storage_provider()
+    if not proposal.pdf_url:
+        watermark = user.plan_id == "free"
+        data = render_proposal_pdf(
+            proposal.proposal_json, watermark=watermark, client_name=proposal.client_name
+        )
+        key = f"proposals/{proposal.id}.pdf"
+        await storage.put(key, data, "application/pdf")
+        proposal.pdf_url = key
+        await db.flush()
+
+    return {"pdf_url": await storage.signed_url(proposal.pdf_url)}
