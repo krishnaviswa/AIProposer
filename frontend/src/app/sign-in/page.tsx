@@ -1,36 +1,46 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 
 // Auth per the AUTH OVERRIDE recorded in docs/architecture.md:
 // email/password (verified) + Google. No SMS OTP, no TOTP in v0.
+//
+// Every sign-in path lands on /auth/callback (ADR-004): Google via `redirectTo`,
+// email/password via a hard navigation so the route handler actually runs. The
+// callback exchanges the code / confirms the session, then redirects to `/`.
 export default function SignInPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // /auth/callback bounces failures back here as ?error=…
+  useEffect(() => {
+    const msg = new URLSearchParams(window.location.search).get("error");
+    if (msg) setError(msg);
+  }, []);
 
   async function signInWithEmail(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     const { error } = await createClient().auth.signInWithPassword({ email, password });
-    setBusy(false);
     if (error) {
+      setBusy(false);
       setError(error.message);
       return;
     }
-    router.push("/");
+    // Hard nav (not router.push) so the /auth/callback route handler runs with
+    // the freshly-set session cookie.
+    window.location.assign("/auth/callback");
   }
 
   async function signInWithGoogle() {
     await createClient().auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/` },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
   }
 
