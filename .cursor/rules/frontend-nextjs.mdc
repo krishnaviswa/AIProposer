@@ -1,0 +1,54 @@
+---
+description: Next.js web client conventions (AIProposer)
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# Frontend rules (Next.js)
+
+Mirrors `frontend/CLAUDE.md`. Keep both in sync (parity table in root `CLAUDE.md`).
+
+## Boundary
+
+The web client is **UI only**. It calls FastAPI `/v1` and nothing else. No business logic, no
+pricing math, no direct LLM/Razorpay/Supabase-DB calls in route handlers. Supabase client SDK is
+used **only** for the auth session (get JWT); every data operation goes through FastAPI.
+
+## Rendering
+
+- Server Components by default (dashboard list, proposal detail shell).
+- `"use client"` only for: the split editor, forms, checkout redirect, hooks, localStorage.
+
+## Structure
+
+- Pages: `src/app/**/page.tsx`
+- Components: `src/components/`
+- API client: `src/lib/api.ts` — one place. Attaches `Authorization: Bearer <supabase JWT>`. Do not scatter `fetch`.
+
+## Proposal editor (spec §3, §15)
+
+- Split UI: PDF-like **preview** (left/main) + **section forms** (right rail / full-screen on mobile).
+- Bind forms to the same fields as the preview. `PATCH` sends allowlisted fields only.
+- **No JSON editor. No "Export JSON" / "Copy source" control. Ever.**
+- Free plan: watermark visible on preview **and** in the downloaded PDF; no follow-up-email copy button.
+- Changing a price field is a normal `PATCH` — it must not trigger a regenerate.
+
+## Auth
+
+Session + JWT from the Supabase client SDK. `api.ts` attaches the bearer token. On `401`, send the
+user back through Supabase sign-in (email verified + Google only).
+
+## UI
+
+- Tailwind. AI-generated copy is editable text, presented as a draft the user owns.
+- Reuse primitives; JSDoc on components (purpose, props, state).
+
+## Local commits
+
+Never commit on `main` — feature branch + PR. `.githooks/pre-commit` enforces this.
+
+## Testing
+
+See the "Testing" section of `frontend/CLAUDE.md` (mirrors `.cursor/rules/testing.mdc`).
+Jest + RTL, colocated under `__tests__/`. Test behavior, not implementation. Assert the
+"no Export JSON" and "watermark on free" invariants where relevant.

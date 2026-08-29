@@ -1,0 +1,4 @@
+# Force LF for hooks/scripts so they run under Git Bash's sh even on Windows
+# clones with core.autocrlf=true (a CRLF shebang line fails silently otherwise).
+.githooks/*      text eol=lf
+scripts/*.py     text eol=lf

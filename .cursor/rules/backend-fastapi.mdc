@@ -1,0 +1,54 @@
+---
+description: FastAPI backend conventions (AIProposer)
+globs: backend/**/*
+alwaysApply: false
+---
+
+# Backend rules (FastAPI)
+
+Mirrors `backend/CLAUDE.md`. Keep both in sync (parity table in root `CLAUDE.md`).
+
+## Layering
+
+- `app/routers/` — HTTP only: request/response schemas, JWT dependency, status codes. No business logic.
+- `app/services/` — business logic: quota, pricing assembler, generation, PDF, billing.
+- `app/services/ai/`, `payments/`, `storage/`, `email/` — adapter packages, `mock` + one real impl each,
+  `TokenUsage` + `estimated_cost_usd` on every AI call, startup validation of missing keys.
+- `app/models/` — SQLAlchemy ORM. Tables per `mvp-spec.md` §6.
+- `app/schemas/` — Pydantic DTOs. The proposal **view DTO** lives here — it is not `proposal_json`.
+- `app/deps.py` — `current_user` (verify Supabase JWT via JWKS, return `sub`), ownership guard.
+
+## Hard rules (from `mvp-spec.md` + Wave 1 docs)
+
+1. Base path `/v1`. Static routes before dynamic (`/proposals/quota` before `/proposals/{id}`).
+2. **JWT verify only** — signature + `exp` + `aud` against Supabase JWKS. No passlib, no token issuing.
+3. **Pricing assembler runs before the model** on generate/regenerate. Egress strips/overwrites any
+   `pricing[].amount` the model returns with server values (`docs/ai-touchpoints.md`).
+4. The LLM is called **only** from the generation service, only on `POST /v1/proposals` and
+   `POST /v1/proposals/{id}/regenerate`. `PATCH`, PDF, list/detail, duplicate, billing → no model call.
+5. Quota: increment `UsageRecords.proposals_count` **only after** a valid `proposal_json` is saved.
+   Parse/validate fail → `502`, 0 quota, nothing persisted. Max 1 automatic retry.
+6. `PATCH /v1/proposals/{id}` — allowlisted keys only; reject others with `422`. Price edits are plain
+   writes. On any successful PATCH, null `pdf_url`.
+7. `GET` list/detail return the **view DTO**. Never serialize raw `proposal_json` as a response body.
+8. Rate limit `POST /v1/proposals` (per user + per IP); max 1 concurrent LLM call per user.
+9. Billing webhook: verify HMAC with `hmac.compare_digest`; upsert `WebhookEvents` on unique
+   `provider_event_id`; duplicate → `200` no-op.
+10. Storage: private objects, signed short-TTL URLs only.
+
+## New endpoint checklist
+
+1. Pydantic request + response schema in `app/schemas/`.
+2. Router function with docstring (method, auth, request, response, errors). Logic delegated to a service.
+3. Ownership / auth via `app/deps.py`.
+4. Alembic migration if the schema changed (never `create_all`).
+5. Pytest in `backend/tests/` (happy path + `401` + ownership `404`). `AI_PROVIDER=mock`.
+6. Architect updates `docs/architecture-sequences.md` / `docs/ai-touchpoints.md` if the flow changed.
+
+## Errors
+
+`HTTPException` with `400/401/403/404/409/422/429/502`. Never leak stack traces or the system prompt.
+
+## Ports / adapters
+
+Never call a vendor SDK directly from a service. Go through the adapter interface so `mock` works in CI.

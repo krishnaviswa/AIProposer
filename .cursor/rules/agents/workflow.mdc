@@ -1,0 +1,82 @@
+---
+description: Multi-agent build workflow — PM → Architect → Builder → Tester
+alwaysApply: false
+---
+
+# Multi-agent workflow (AIProposer)
+
+Use this whenever building a slice. Mirrored in the **"Multi-agent workflow"** section of the
+root `CLAUDE.md`. Keep both in sync (enforced by `scripts/check_agent_config_sync.py`).
+
+## Sequence (mandatory)
+
+```
+PM (slice brief) → Architect (tech spec) → Builder (code) → Tester (report) → PM (accept)
+```
+
+Do not skip steps. **No Builder before the Architect has filled the technical section of the slice
+file and checked it against the Wave 1 diagrams** (`docs/architecture-sequences.md`, `docs/ai-touchpoints.md`).
+
+## Artifact locations
+
+| Stage | Output | Path |
+|---|---|---|
+| PM | Slice brief | `docs/agents/slices/S-XXX-*.md` (from `_TEMPLATE.md`) |
+| Architect | Tech spec on the slice + optional ADR | Same slice file + `docs/agents/adrs/ADR-XXX-*.md` |
+| Builder | Code + doc updates | `backend/`, `frontend/`; Architect updates the Wave 1 docs if the flow changed |
+| Tester | Test plan + report | `docs/agents/test-plans/TP-S-XXX-*.md`, `docs/agents/test-reports/TR-S-XXX-*.md` |
+| PM | Accept / rework | `Status` field on the slice file |
+
+## Slice sizing
+
+One slice = one PR-sized vertical change. Align to the phases:
+
+- **Phase 1 — Platform skeleton** (Wave 3): Supabase JWT verify, `/v1/me`, proposals CRUD, PATCH
+  allowlist, quota counter, mock adapters. LLM adapter returns mock copy or is unplugged.
+- **Phase 2 — AI + money** (Wave 4): real LLM adapter, `POST /v1/proposals` + `regenerate`, cached
+  server-side PDF, Razorpay checkout + HMAC webhook.
+- **Phase 3 — v1.1**: competitor compare (Pro+), infographics, packs. Not before Phase 2 ships.
+
+`S-000-agent-bootstrap` (this wave) is Phase 0: the workflow itself, no product code.
+
+## Read order per agent
+
+1. `mvp-spec.md` §0 locked decisions + the section(s) for the slice's area (§6 data, §7 API, §9 prompt/pricing, §15 leak, §16 injection).
+2. `docs/architecture.md` + `docs/architecture-sequences.md` + `docs/ai-touchpoints.md`.
+3. The current slice file and any linked ADR.
+4. `docs/roadmap.md` to confirm the slice is v0 and not a deferred item.
+
+## Conflict resolution
+
+| Dispute | Owner |
+|---|---|
+| User value, UX, AC wording, what's in scope | Product Manager |
+| API shape, schema, layering, where inference runs | Architect |
+| Test coverage, release readiness | Tester |
+| "Money never originates in the model" | Non-negotiable (spec §9) — not up for debate |
+| Implementation style | The builder rules (`.cursor/rules/backend-fastapi.mdc`, `frontend-nextjs.mdc`) |
+
+## Definition of done (full cycle)
+
+- [ ] All acceptance criteria numbered and testable
+- [ ] Architect checklist complete on the slice file; no contradiction with the Wave 1 docs
+- [ ] Code on a **feature branch** + PR — never commit on `main` (`.githooks/pre-commit` enforces locally)
+- [ ] Every AC mapped to a test (A or M) in the test report
+- [ ] If the slice touched an LLM / quota / money / DTO path, `docs/ai-touchpoints.md` still accurate
+- [ ] If the slice added or changed a v0 journey, `docs/architecture-sequences.md` updated
+- [ ] New deferred ideas recorded in `docs/roadmap.md` (same PR); `mvp-spec.md` untouched
+- [ ] `README.md` wave/slice status table updated
+- [ ] Parity check passes (`scripts/check_agent_config_sync.py`)
+- [ ] PM set `Status: Accepted` on the slice file
+
+## Invoking roles
+
+Tell the agent explicitly: *"Act as Product Manager for slice S-00X"*, *"Act as Architect, fill the
+tech spec for S-00X"*, *"Run the full cycle for S-00X"*.
+
+## Claude Code parity
+
+In Claude Code this sequence lives in the "Multi-agent workflow" section of the root `CLAUDE.md`,
+and the three roles are subagents in `.claude/agents/` (`product-manager.md`, `architect.md`,
+`tester.md`) — invoked the same way, or via the Agent tool with `subagent_type: architect`.
+Keep this file and those in sync.
