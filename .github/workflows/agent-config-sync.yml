@@ -1,0 +1,39 @@
+name: Agent config sync
+
+# Fails the build if a PR (or a push to main) edits .cursor/rules/** without updating the
+# matching CLAUDE.md / .claude/agents/** file, or vice versa. See
+# scripts/check_agent_config_sync.py and the parity table in the root CLAUDE.md.
+# Add this as a required status check in branch protection to make the rule non-bypassable.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check Cursor/Claude config sync (PR diff)
+        if: github.event_name == 'pull_request'
+        run: |
+          python scripts/check_agent_config_sync.py \
+            --range "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}"
+
+      - name: Check Cursor/Claude config sync (push diff)
+        if: github.event_name == 'push'
+        run: |
+          python scripts/check_agent_config_sync.py \
+            --range "${{ github.event.before }}...${{ github.sha }}"

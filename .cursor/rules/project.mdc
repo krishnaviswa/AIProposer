@@ -1,0 +1,78 @@
+---
+description: AIProposer global project conventions
+alwaysApply: true
+---
+
+# AIProposer
+
+Single-operator AI proposal / quote generator. One freelancer pastes a client brief,
+confirms **their own** prices, and leaves with a sendable proposal (preview + cached PDF).
+
+## Stack (v0)
+
+- Backend: **FastAPI**, base path `/v1`. All business logic. Async SQLAlchemy + Alembic, Pydantic.
+- Web: **Next.js** (App Router, TS, Tailwind) in `frontend/`. UI only — talks to FastAPI, nothing else.
+- Identity: **Supabase Auth** (email verified + Google). FastAPI **only verifies** the JWT (JWKS).
+- Data: Supabase **Postgres**; private **Storage** (signed short-TTL URLs).
+- Payments: **Razorpay** only (INR rail). HMAC webhook + `WebhookEvents` idempotency.
+- LLM: **one** provider behind a Python adapter. PDF: server-side from structured data.
+- Adapters (AI / payments / storage / email) follow the **MEngPlat skeleton** — each has a `mock` used in CI.
+
+## Source of truth
+
+- [`mvp-spec.md`](mvp-spec.md) — **FROZEN v0 spec**. Never edit §0–§20 to expand scope, change prices,
+  SKUs, or included counts. New "later" ideas go in [`docs/roadmap.md`](docs/roadmap.md).
+- [`docs/architecture.md`](docs/architecture.md), [`docs/architecture-sequences.md`](docs/architecture-sequences.md),
+  [`docs/ai-touchpoints.md`](docs/ai-touchpoints.md) — **binding** Wave 1 pictures. Architect keeps them current;
+  Builder does not contradict them.
+- [`README.md`](README.md) is an **index**, not prose docs.
+- [`AGENTS.md`](AGENTS.md) — repo map + where each tool's config lives.
+
+## Non-negotiables
+
+1. **Money on the proposal comes from the user** (saved packages / hours × their rate). Never from
+   the model, never from a multiplier. FastAPI strips/overwrites any amount the model emits (spec §0.3, §9).
+2. **The LLM runs at exactly two v0 endpoints** — `POST /v1/proposals` and `POST /v1/proposals/{id}/regenerate`.
+   Nowhere else (see [`docs/ai-touchpoints.md`](docs/ai-touchpoints.md)). No streaming JSON.
+3. **`proposal_json` is server-only.** Clients get a **view DTO** (preview + form sections). No "Export JSON",
+   no "copy as markdown" (spec §0.4, §15).
+4. Use the **adapter layers** (`app/services/ai/`, `payments/`, `storage/`, `email/`); mock in CI.
+5. Business logic in FastAPI `services/`, not routers, never in Next.js route handlers.
+6. REST under `/v1`. Supabase JWT verified in FastAPI — **no passlib / custom auth** (spec §18.2).
+7. **Alembic migrations only** — no `create_all` in prod.
+8. The client brief is **untrusted input** — char caps + injection guards before the model (spec §16).
+9. Never commit secrets (`.env`, keys). No live LLM or Razorpay keys in CI.
+10. Keep diffs minimal; match existing patterns.
+11. Local dev: `docker compose up --build` (Postgres + API + web; every adapter `mock`/local).
+
+## Auth model
+
+One user role: the freelancer who **owns** the quote. Every `/v1` handler authorizes the caller
+for **their own rows only** (`proposal.user_id == sub`). No `customer`/`merchant`/`admin` tiers;
+seats are post-v0 (`docs/roadmap.md`).
+
+## Multi-agent workflow
+
+`PM (slice brief) → Architect (tech spec) → Builder (code) → Tester (report) → PM (accept)`.
+Do not skip steps. **No Builder before the Architect section is filled against the Wave 1 diagrams.**
+Never commit on `main`. Details: [`CLAUDE.md`](CLAUDE.md) "Multi-agent workflow" + `.cursor/rules/agents/`.
+
+## Cursor ↔ Claude Code parity
+
+Built with both Cursor and Claude Code. Every rule in `.cursor/rules/` has a mirror in Claude
+Code's native config, so a session in either tool has the same context.
+
+| This Cursor rule | Mirrors |
+| --- | --- |
+| `project.mdc` (this file) | `CLAUDE.md` (root) |
+| `agents/workflow.mdc` | "Multi-agent workflow" section of `CLAUDE.md` (root) |
+| `agents/role-product-manager.mdc` | `.claude/agents/product-manager.md` |
+| `agents/role-architect.mdc` | `.claude/agents/architect.md` |
+| `agents/role-tester.mdc` | `.claude/agents/tester.md` |
+| `backend-fastapi.mdc` | `backend/CLAUDE.md` |
+| `frontend-nextjs.mdc` | `frontend/CLAUDE.md` |
+| `testing.mdc` | `backend/CLAUDE.md` + `frontend/CLAUDE.md` ("Testing" sections) |
+| `docs-and-api.mdc` | `docs/CLAUDE.md` |
+
+**Sync rule:** change a convention on one side, port it to the matching file in the **same commit**.
+Enforced by [`scripts/check_agent_config_sync.py`](scripts/check_agent_config_sync.py) (pre-commit hook + CI).

@@ -1,0 +1,33 @@
+#!/bin/sh
+# Local commit gate for AIProposer.
+#
+# 1. Block commits on main/master — use a feature branch + PR instead.
+# 2. Keep Cursor <-> Claude Code config pairs in sync
+#    (scripts/check_agent_config_sync.py; parity table in root CLAUDE.md).
+#
+# One-time setup per clone: git config core.hooksPath .githooks
+# IDE Source Control commits invoke this hook too. Bypass with --no-verify;
+# GitHub branch protection is the remote lock.
+
+branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")"
+if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
+  echo "pre-commit: refusing commit on '$branch'."
+  echo "  Create a feature branch first, e.g.:"
+  echo "    git checkout -b slice/S-XXX-short-name"
+  echo "  Then commit, push, and open a PR."
+  exit 1
+fi
+
+if ! command -v python >/dev/null 2>&1; then
+  echo "pre-commit: python not on PATH — cannot run the agent-config sync check."
+  echo "  Install Python 3 or commit with --no-verify (not recommended)."
+  exit 1
+fi
+
+python scripts/check_agent_config_sync.py --staged
+sync_status=$?
+if [ "$sync_status" -ne 0 ]; then
+  exit "$sync_status"
+fi
+
+exit 0

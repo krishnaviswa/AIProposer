@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Local env + data
+.env
+backend/.env
+*.db
+backend/uploads/
+uploads/
+
+# Node (frontend — S-002)
+node_modules/
+.next/
+
+# OS / editor
+.DS_Store

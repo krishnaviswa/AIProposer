@@ -1,0 +1,51 @@
+---
+description: Testing expectations (AIProposer)
+globs: backend/tests/**/*,frontend/**/__tests__/**/*
+alwaysApply: false
+---
+
+# Testing
+
+Mirrored in the **"Testing"** section of both `backend/CLAUDE.md` and `frontend/CLAUDE.md`
+(parity table in root `CLAUDE.md`). Keep all three in sync.
+
+## Principles
+
+- **No live vendors in tests or CI.** `AI_PROVIDER=mock`, `PAYMENT_PROVIDER=mock`,
+  `STORAGE=local`, `EMAIL_PROVIDER=mock`. No Supabase network — verify JWTs against a test JWKS / fake.
+- Every acceptance criterion on a slice maps to **A** (automated: file + test name) or **M**
+  (manual: checklist ID) in the slice's test report. No AC left unmapped.
+- Default run: only the tests for the area you changed. Full `pytest` / `npm test` before merge,
+  when a shared helper changed, or when asked.
+
+## Backend (pytest)
+
+- `httpx.AsyncClient` + `ASGITransport` against `app.main:app`.
+- Per endpoint: happy path, `401` unauthenticated, `404` on another user's row.
+- Generation tests use the **mock AI adapter** and assert: prices in the saved `proposal_json`
+  equal the user's saved amounts; any model-emitted amount is overwritten; quota increments only
+  on a saved success; parse-fail → 0 quota.
+- Billing tests: HMAC reject on bad signature; duplicate `provider_event_id` is a no-op.
+
+## Frontend (Jest + RTL)
+
+- Colocate under `__tests__/`. Render, user events, assert on visible outcomes.
+- Assert product invariants: no "Export JSON" control exists; free-plan preview shows the watermark;
+  editing a price field calls `PATCH`, not regenerate.
+
+## Browser e2e (later)
+
+Playwright (Python) under `backend/tests/e2e/`, opt-in via `E2E=1`. Not a merge gate in v0.
+Do not add Cypress/Selenium.
+
+## Local git hooks (every commit, IDE included)
+
+- One-time: `git config core.hooksPath .githooks`.
+- Hook refuses commits on `main`/`master`, then runs `scripts/check_agent_config_sync.py --staged`.
+
+## CI
+
+- `agent-config-sync.yml` runs the parity check on PRs (see workflow file for enablement state).
+- `backend-tests.yml` (S-001) runs pytest vs a throwaway Postgres; `frontend-tests.yml` (S-002)
+  runs `typecheck` + `jest` + `next build`. Neither uses a live LLM, live Razorpay, or a real
+  Supabase project.

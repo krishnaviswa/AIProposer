@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aiproposer
+      POSTGRES_PASSWORD: aiproposer
+      POSTGRES_DB: aiproposer
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aiproposer"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://aiproposer:aiproposer@postgres:5432/aiproposer
+      DEBUG: "true"
+      CORS_ORIGINS: http://localhost:3000
+      # Supabase Auth — FastAPI only verifies the JWT (ADR-001).
+      SUPABASE_JWT_ALG: HS256
+      SUPABASE_JWT_SECRET: dev-supabase-jwt-secret-change-me
+      SUPABASE_JWT_AUD: authenticated
+      # Adapters default to mock/local. Set AI_PROVIDER=anthropic + ANTHROPIC_API_KEY,
+      # or PAYMENTS_PROVIDER=razorpay + the RAZORPAY_* keys, to go live.
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-claude-haiku-4-5}
+      PAYMENTS_PROVIDER: ${PAYMENTS_PROVIDER:-mock}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-dev-webhook-secret-change-me}
+      STORAGE_PROVIDER: local
+      EMAIL_PROVIDER: mock
+      STORAGE_LOCAL_PATH: /app/uploads
+    volumes:
+      - ./backend:/app
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "python -m alembic upgrade head
+      && PYTHONPATH=. python scripts/seed.py
+      && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/v1
+      # Fill these from your Supabase project (Auth only).
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-https://your-project-ref.supabase.co}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:-your-anon-key}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  uploads_data:

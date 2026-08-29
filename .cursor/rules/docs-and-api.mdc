@@ -1,0 +1,30 @@
+---
+description: Documentation & spec-change rules (AIProposer)
+globs: README.md,docs/**/*,mvp-spec.md
+alwaysApply: false
+---
+
+# Documentation & spec rules
+
+Mirrors `docs/CLAUDE.md`. Keep both in sync (parity table in root `CLAUDE.md`).
+
+## The documents and who may change them
+
+| Document | Status | Who edits it |
+|---|---|---|
+| [`mvp-spec.md`](mvp-spec.md) | **FROZEN** | Nobody, for scope/price/SKU/count changes. Dated changelog entries only, after a human review. |
+| [`docs/architecture.md`](docs/architecture.md) | Binding | **Architect**, when a slice changes containers, trust boundaries, or the in/out list. |
+| [`docs/architecture-sequences.md`](docs/architecture-sequences.md) | Binding | **Architect**, when a slice adds or changes a v0 journey. Every LLM hop keeps its "AI inference" note. |
+| [`docs/ai-touchpoints.md`](docs/ai-touchpoints.md) | Binding | **Architect**, when a slice touches an LLM/quota/money path. Must stay true: two v0 AI hops, nowhere else. |
+| [`docs/roadmap.md`](docs/roadmap.md) | Living | Anyone, in the **same PR** as the idea. New "later" ideas from chat land here — not in `mvp-spec.md`. |
+| [`README.md`](README.md) | Index | Anyone, to keep links + the wave/slice status table current. |
+| `docs/agents/**` | Artifacts | The workflow roles, from `_TEMPLATE.md`. Not prose docs. |
+
+## Rules
+
+- **Never add a new top-level prose `.md`.** Product decisions are `mvp-spec.md` (frozen) + the three
+  Wave 1 docs. Deferred ideas are `docs/roadmap.md`. Everything else is an index link or an agent artifact.
+- If a slice would contradict a Wave 1 doc, that is a red flag — raise it with the Architect / PM,
+  do not silently diverge. If the spec genuinely needs to change, stop and ask for a human review.
+- Mermaid for non-trivial flows. Semicolons are statement separators in mermaid — use `,` in message text.
+- `.cursor/**`, `CLAUDE.md`, `.claude/**` are tooling config, exempt from the "no new prose doc" rule.
