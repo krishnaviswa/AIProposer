@@ -45,18 +45,18 @@ sequenceDiagram
 
   U->>W: Brief + Generate
   W->>A: POST /v1/proposals
-  A->>DB: Quota check; persist user prices
+  A->>DB: Quota check, persist user prices
   Note over A,LLM: AI touchpoint 1 — structured copy only
   A->>LLM: Prompt + schema (no authority over amounts)
   LLM-->>A: JSON copy
   A->>A: Overwrite pricing[].amount from user
-  A->>DB: Save proposal_json; increment usage
+  A->>DB: Save proposal_json, increment usage
   A-->>W: View DTO (forms + preview, not export JSON)
 
   U->>W: Edit copy or prices
   W->>A: PATCH allowlist
   Note over A: No LLM, no quota
-  A->>DB: Update; invalidate pdf_url
+  A->>DB: Update, invalidate pdf_url
 
   U->>W: Download PDF
   W->>A: GET .../pdf
