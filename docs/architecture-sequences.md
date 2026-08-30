@@ -26,24 +26,45 @@ Participant legend: **U** freelancer (browser) · **W** Next.js · **A** FastAPI
 Per the AUTH OVERRIDE recorded in [`architecture.md`](architecture.md#auth-override-recorded-once-here-waves-24-inherit-this):
 **email/password (verified) + Google only.** No SMS OTP, no TOTP in v0.
 
+Every sign-in path (Google OAuth, the email-verification link, **and** email/password) funnels through
+one Next.js `/auth/callback` route handler (S-006,
+[`ADR-004`](agents/adrs/ADR-004-auth-redirect-callback.md)). That handler does exactly two things — a
+Supabase `exchangeCodeForSession` when a `?code=` is present, then an HTTP redirect — **no `/v1` call,
+no domain logic.** v0 always redirects to `/` (no `next` / `redirectTo` param). A `?error=` param or a
+failed exchange redirects to `/sign-in?error=…` with no session set.
+
 ```mermaid
 sequenceDiagram
     actor U as Freelancer
     participant W as Next.js
+    participant CB as Next.js /auth/callback route handler
     participant Auth as Supabase Auth
     participant A as FastAPI /v1
 
+    Note over U,CB: Every sign-in path funnels through /auth/callback. The handler does ONLY a Supabase code exchange plus an HTTP redirect, no /v1 call, no domain logic.
     alt Email + password
         U->>W: email + password
         W->>Auth: signInWithPassword
-        Auth-->>W: session JWT (only if email is verified)
+        Auth-->>W: session (only if email is verified)
+        W->>CB: hard nav to /auth/callback (no code, session cookie present)
     else Google OAuth
         U->>W: "Continue with Google"
-        W->>Auth: signInWithOAuth(google)
-        Auth-->>W: redirect back + session JWT
+        W->>Auth: signInWithOAuth(google, redirectTo = <origin>/auth/callback)
+        Auth-->>CB: redirect to /auth/callback?code=...
+    else Email verification link
+        U->>CB: /auth/callback?code=... (from the email)
     end
 
-    Note over W,A: No LLM. No quota.
+    opt ?code= present
+        CB->>Auth: exchangeCodeForSession(code)
+    end
+    alt ?error= present, or the exchange fails
+        CB-->>U: 303 /sign-in?error=<message>  (no session set)
+    else exchange ok, or a valid session already present
+        CB-->>U: 303 /  + Set-Cookie session
+    end
+
+    Note over W,A: v0 always redirects to /. No next / redirectTo param is read or supported (deep-link-back is a roadmap item). No LLM. No quota.
     U->>W: opens app / triggers any /v1 call
     W->>A: GET /v1/me  (Authorization: Bearer <JWT>)
     A->>Auth: fetch JWKS (cached)
@@ -188,6 +209,13 @@ sequenceDiagram
 
 ## 6. Subscribe — India Starter (Razorpay)
 
+The `/billing` page loads hosted Razorpay **Checkout.js**
+(`https://checkout.razorpay.com/v1/checkout.js`) via `next/script` on that route **only** (S-006). The
+modal opens with the amount taken **straight from the `POST /v1/billing/checkout-session` response** —
+never computed client-side. The browser "success" handler shows a pending note and does a single
+`GET /v1/me` refetch; it does **not** flip the plan client-side. A missing / mock key or a
+script-load failure degrades to the S-004 order-summary fallback.
+
 ```mermaid
 sequenceDiagram
     actor U as Freelancer
@@ -197,15 +225,30 @@ sequenceDiagram
     participant Pay as Razorpay
     participant DB as Postgres
 
+    W->>W: /billing mounts, next/script loads checkout.razorpay.com/v1/checkout.js (this route only)
     U->>W: choose Starter (India, ₹500 / 20), pay
     W->>A: POST /v1/billing/checkout-session (JWT, plan = starter_inr)
     A->>Auth: verify JWT
     A->>A: resolve SKU from in-code catalog (amount in paise)
     A->>Pay: create subscription / order
     Pay-->>A: subscription id + checkout params
-    A-->>W: checkout params
-    W->>Pay: open Razorpay hosted checkout
-    Pay-->>W: client-side success handoff
+    A-->>W: checkout params (provider_order_id, key_id, amount_paise, currency)
+
+    alt real key + Checkout.js loaded
+        W->>Pay: open Razorpay hosted checkout (amount = amount_paise straight from the response, never computed client-side)
+        alt success handoff
+            Pay-->>W: payment id + signature (client handoff, UX only)
+            W->>W: show "payment received, your plan updates in a moment"
+            W->>A: GET /v1/me (single refetch, no poll, no client-side plan flip)
+            A-->>W: plan stays free until the webhook lands
+        else modal.ondismiss
+            Pay-->>W: dismissed, neutral "checkout cancelled", plan and usage unchanged
+        else payment.failed
+            Pay-->>W: reason, error note, button back to idle, retry without reload
+        end
+    else missing / mock key, or Checkout.js failed to load
+        W->>W: S-004 fallback, show order id + amount, "the webhook completes the upgrade"
+    end
 
     Note over Pay,A: authoritative state change comes from the webhook, not the browser
     Pay->>A: POST /v1/billing/webhook (event + signature)
