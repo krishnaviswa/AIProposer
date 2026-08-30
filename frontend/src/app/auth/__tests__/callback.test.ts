@@ -62,4 +62,17 @@ describe("/auth/callback", () => {
     const src = fs.readFileSync(path.join(__dirname, "../callback/route.ts"), "utf8");
     expect(src).not.toMatch(/lib\/api|apiFetch|\/v1\//);
   });
+
+  it("reads no next / redirectTo param — v0 always lands on / (AC 9, ADR-004)", () => {
+    const fs = jest.requireActual("fs") as typeof import("fs");
+    const path = jest.requireActual("path") as typeof import("path");
+    const src = fs.readFileSync(path.join(__dirname, "../callback/route.ts"), "utf8");
+    expect(src).not.toMatch(/get\(["'](next|redirectTo|redirect_to)["']\)/);
+  });
+
+  it("redirects to / (not a param-supplied target) even when ?next= is present (AC 9)", async () => {
+    exchangeCodeForSession.mockResolvedValue({ error: null });
+    const res = await GET(req("/auth/callback?code=good&next=/billing"));
+    expect(res.headers.get("location")).toBe("http://localhost:3000/");
+  });
 });

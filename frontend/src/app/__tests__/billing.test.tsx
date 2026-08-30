@@ -1,3 +1,6 @@
+import fs from "fs";
+import path from "path";
+
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -42,6 +45,26 @@ it("shows the current plan and the Starter offer", async () => {
   expect(screen.getByText("₹500/mo")).toBeInTheDocument();
 });
 
+it("hosted Checkout.js is loaded on /billing only — no other route references it (AC 1)", () => {
+  const appDir = path.join(__dirname, "..");
+  const hits: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === "__tests__") continue;
+        walk(full);
+      } else if (/\.(tsx?|jsx?)$/.test(entry.name)) {
+        if (fs.readFileSync(full, "utf8").includes("checkout.razorpay.com")) {
+          hits.push(path.relative(appDir, full).replace(/\\/g, "/"));
+        }
+      }
+    }
+  };
+  walk(appDir);
+  expect(hits).toEqual(["billing/page.tsx"]);
+});
+
 it("mock key / no Checkout.js -> order-summary fallback, no crash (AC 6)", async () => {
   render(<BillingPage />);
   await screen.findByText(/Current plan:/);
@@ -76,10 +99,14 @@ it("success handler -> pending note + a single /v1/me refetch, no client-side pl
   render(<BillingPage />);
   await screen.findByText(/Current plan:/);
 
+  const checkoutBefore = checkout.mock.calls.length;
   await userEvent.click(screen.getByRole("button", { name: /Upgrade to Starter/ }));
-  // amount handed to Razorpay is the server value, untouched (AC 2).
+  // amount + currency handed to Razorpay are the server values, untouched (AC 2).
   expect(rzp.options.amount).toBe(50000);
+  expect(rzp.options.currency).toBe("INR");
   expect(rzp.options.order_id).toBe("order_mock_1");
+  // exactly one checkout-session call for the whole flow (AC 2 / AC 7).
+  expect(checkout.mock.calls.length).toBe(checkoutBefore + 1);
 
   const before = getMe.mock.calls.length;
   await act(async () => {
