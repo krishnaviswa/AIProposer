@@ -29,6 +29,9 @@ a local `users` row on first sight of a `sub`. Supabase Auth owns sign-up and th
    `verifyOtp(...)` on the client; the SMS provider (MSG91 for +91) is configured in the Supabase
    dashboard. FastAPI gains **no** SMS dependency and **no** new endpoint — the JWT-verification
    contract is unchanged. `docs/ai-touchpoints.md` is unchanged: login is still a zero-LLM path.
+   On `verifyOtp` success the client hard-navigates to `/auth/callback` — the single post-auth
+   funnel introduced by S-006 / [`ADR-004`](ADR-004-auth-redirect-callback.md); the callback finds
+   the already-set session (no `?code=`) and redirects to `/`.
 2. **Two feature flags, both default `false` and `false` in CI:**
    - Backend `AUTH_PHONE_OTP` (`Settings.auth_phone_otp` — field name == env name).
    - Frontend `NEXT_PUBLIC_AUTH_PHONE_OTP` (renders the phone option on `/sign-in`).
@@ -67,7 +70,8 @@ a local `users` row on first sight of a `sub`. Supabase Auth owns sign-up and th
 - `docs/roadmap.md`: SMS / phone OTP row → `feature-flag`; add "phone/email account linking" as
   `deferred`.
 - `docs/architecture.md` AUTH OVERRIDE + `docs/architecture-sequences.md` sequence 1: add the phone
-  branch (behind the flag).
+  branch (behind the flag). *(Done; sequence 1 also carries the S-006 `/auth/callback` funnel — the
+  phone branch ends with a hard nav to `/auth/callback` like every other path.)*
 
 ---
 

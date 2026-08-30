@@ -23,7 +23,7 @@ _Last updated: 2026-08-29. All 4 implementation waves are complete and merged to
 
 ## 3. Pre-launch engineering (deferred from the waves)
 
-- [ ] Hosted Razorpay checkout — wire `checkout.js` + `/auth/callback`; current `/billing` uses the Orders API server-side only. **Slice S-006** (`docs/agents/slices/S-006-hosted-checkout.md`, spec + ADR-004 written; Builder pending).
+- [x] Hosted Razorpay checkout — `checkout.js` on `/billing` via `next/script` + Next.js `/auth/callback` code-exchange route. **Slice S-006** (`docs/agents/slices/S-006-hosted-checkout.md`, ADR-004) — Accepted 2026-08-30, merged to `main` (PR #3). Real Razorpay modal + real Supabase OAuth stay pre-launch manual checks (M-004 / M-005).
 - [ ] Signed storage URLs — S3 / Supabase Storage signed URLs for PDF delivery (today the PDF is served straight from the backend).
 - [ ] Model bake-off — run the mvp-spec §16 20-brief benchmark across candidate models; verify prompt-cache hit rate on the cached system prompt; pin `AI_MODEL`.
 - [ ] Playwright E2E — end-to-end coverage of the sign-in → new proposal → edit → PDF → upgrade flow. Only unit/integration tests exist now.
@@ -37,4 +37,4 @@ Competitor-compare view · one-page infographic export · Flutter mobile app · 
 
 - Frozen spec: `mvp-spec.md` (§13 answers, §14 revisions, §16 benchmark plan)
 - Architecture: `docs/architecture.md`, `docs/architecture-sequences.md`, `docs/ai-touchpoints.md`
-- Slice history: `docs/agents/slices/` (S-000 … S-004 Accepted; S-005 phone-OTP Accepted; S-006 hosted-checkout Specified)
+- Slice history: `docs/agents/slices/` (S-000 … S-004 Accepted; S-006 hosted-checkout Accepted + merged; S-005 phone-OTP Accepted)

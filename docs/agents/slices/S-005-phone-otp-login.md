@@ -39,7 +39,9 @@
    `NEXT_PUBLIC_AUTH_PHONE_OTP === "true"`.
 6. **Given** `NEXT_PUBLIC_AUTH_PHONE_OTP` is true, **when** the user enters a phone number and the
    SMS code on `/sign-in`, **then** the client calls `supabase.auth.signInWithOtp` then
-   `verifyOtp({ type: "sms" })` and, on success, routes to `/`.
+   `verifyOtp({ type: "sms" })` and, on success, hard-navigates to `/auth/callback` — the same
+   funnel every other sign-in path uses (S-006, [`ADR-004`](../adrs/ADR-004-auth-redirect-callback.md));
+   the callback confirms the session and redirects to `/`.
 7. **No** `/v1` endpoint is added. **No** LLM call and **no** quota change anywhere near sign-in
    (`docs/ai-touchpoints.md` row "Sign in / session" and "Validate JWT" unchanged).
 8. Alembic migration `0002` adds `users.phone` (nullable, indexed) and makes `users.email` nullable;
@@ -64,7 +66,8 @@
 
 - Account linking / merging (email sign-up + phone sign-up by the same human → two `sub`s). Deferred
   (roadmap).
-- Deep-link-back / `next` param after login (kept as-is — always land on `/`).
+- Deep-link-back / `next` param after login (kept as-is — every path funnels through `/auth/callback`,
+  which always lands on `/` in v0 per ADR-004).
 - Forced email capture for phone-only accounts; billing-receipt behaviour with a null email
   (billing slice).
 - MSG91 API keys, DLT sender-ID registration — an ops task before the flag is turned on in prod.
@@ -170,3 +173,4 @@ See `docs/architecture-sequences.md` sequence 1 — the new `else Phone OTP` bra
 | 2026-08-29 | Tester | 5 backend + 2 frontend tests; suite 66 BE / 14 FE green; migration up/down verified — see TR-S-005 |
 | 2026-08-29 | PM | AC 1–8 verified; **Accepted** |
 | 2026-08-29 | Verify | Split onto branch `s-005-phone-otp`; fixed un-flippable flag (`auth_phone_otp_enabled` → `auth_phone_otp`, env `AUTH_PHONE_OTP`); +2 backend tests (env binding, both-claims backfill); suite 68 BE / 14 FE |
+| 2026-08-30 | Rebase | Rebased onto `main` after S-006 merged. `/sign-in` reconciled: phone-OTP success now hard-navigates to `/auth/callback` (same funnel as Google + email/password, ADR-004) instead of `router.push("/")`; `useRouter` dropped. `sign-in.test.tsx` merged with S-006's (`stubLocation` helper); phone test now also asserts the `/auth/callback` nav. §1 sequence diagram gained the phone branch alongside the S-006 callback branches. Suite 68 BE / 30 FE (6 sign-in). |

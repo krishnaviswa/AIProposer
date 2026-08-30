@@ -37,7 +37,7 @@ behaviour. Backend suite now **68 passed**.
 | 3 | `phone` backfilled onto an existing email account, no 2nd row | A | `test_auth_phone.py::test_phone_backfilled_onto_existing_email_account` | Pass |
 | 4 | JWT with neither `email` nor `phone` → `401` | A | `test_auth_phone.py::test_token_with_neither_email_nor_phone_is_401` | Pass |
 | 5 | Email + Google unchanged; `phone: null`; no phone field by default | A | `test_auth_phone.py::test_email_login_still_works_and_reports_no_phone` · `sign-in.test.tsx` (default) · 64 pre-existing tests | Pass |
-| 6 | Flag on → `signInWithOtp` then `verifyOtp({type:"sms"})` → `/` | A | `sign-in.test.tsx::"shows the phone OTP flow when NEXT_PUBLIC_AUTH_PHONE_OTP=true"` | Pass |
+| 6 | Flag on → `signInWithOtp` then `verifyOtp({type:"sms"})` → hard-nav to `/auth/callback` (ADR-004 funnel) | A | `sign-in.test.tsx::"shows the phone OTP flow when NEXT_PUBLIC_AUTH_PHONE_OTP=true, then lands on /auth/callback"` | Pass |
 | 7 | No `/v1` endpoint; no LLM / quota near sign-in | Review | `git diff main -- docs/ai-touchpoints.md` empty; no file added under `backend/app/routers/` | Pass |
 | 8 | Migration `0002` adds `phone`, makes `email` nullable, reversible | A/M | `alembic upgrade head` + `downgrade base` on scratch sqlite; `PRAGMA table_info(users)` | Pass |
 
@@ -65,20 +65,28 @@ cd backend && python -m pytest -q
 ## Frontend tests
 
 ### Added
-- `frontend/src/app/__tests__/sign-in.test.tsx` — 2 tests (phone block hidden by default; full
-  request-code → verify-code wiring when `NEXT_PUBLIC_AUTH_PHONE_OTP=true`)
+- `frontend/src/app/__tests__/sign-in.test.tsx` — 2 phone tests (phone block hidden by default; full
+  request-code → verify-code wiring when `NEXT_PUBLIC_AUTH_PHONE_OTP=true`, then hard-nav to
+  `/auth/callback`)
 
-### Run output
+### Run output (pre-S-006, at acceptance)
 ```
 npm test
 Test Suites: 5 passed, 5 total
 Tests:       14 passed, 14 total
 ```
+
+### Run output (2026-08-30, rebased onto main after S-006)
+```
+npx jest
+Test Suites: 6 passed, 6 total
+Tests:       30 passed, 30 total
+```
 ```
 npx tsc --noEmit   # clean
-npm run build      # green — /sign-in prerenders, 1.34 kB
 ```
-(12 pre-existing + 2 new.)
+`sign-in.test.tsx` was merged with the S-006 copy (shared `stubLocation` helper, 6 tests total:
+4 from S-006 + 2 phone). Net frontend delta from S-005 over an S-006 `main`: **+2 tests** (28 → 30).
 
 ---
 
