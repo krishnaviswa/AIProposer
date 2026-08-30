@@ -80,7 +80,7 @@ duplicate, checkout, and webhooks never call the LLM. Flutter and Stripe are out
 | [`S-002-nextjs-client`](docs/agents/slices/S-002-nextjs-client.md) | 1 Platform skeleton | **Accepted** — Next.js 15 client, 8 Jest tests |
 | [`S-003-live-ai-and-pdf`](docs/agents/slices/S-003-live-ai-and-pdf.md) | 2 AI + money | **Accepted** — live Claude adapter (ADR-002) + cached PDF, 56 pytest tests |
 | [`S-004-razorpay-and-web-money`](docs/agents/slices/S-004-razorpay-and-web-money.md) | 2 AI + money | **Accepted** — Razorpay Orders API + HMAC webhook + web PDF/upgrade, 61 pytest + 12 Jest |
-| [`S-006-hosted-checkout`](docs/agents/slices/S-006-hosted-checkout.md) | 2 AI + money | **Specified** — hosted Razorpay Checkout.js on `/billing` + Next.js `/auth/callback` code-exchange route (ADR-004); Builder pending |
+| [`S-006-hosted-checkout`](docs/agents/slices/S-006-hosted-checkout.md) | 2 AI + money | **Accepted** — hosted Razorpay Checkout.js on `/billing` + Next.js `/auth/callback` code-exchange route (ADR-004), 28 Jest (61 pytest unchanged); AC 2 / AC 12 have a pre-launch live-key manual step |
 
 `backend/` is the FastAPI service (auth, `/v1/me`, proposals CRUD + quota, Alembic, pytest) with a
 **live Claude adapter** (`AI_PROVIDER=anthropic`, `claude-haiku-4-5` per ADR-002), a **server-side
@@ -91,8 +91,9 @@ default and the only thing CI runs — no live keys anywhere. `frontend/` is the
 split editor / `/billing`, Jest) with real PDF download and an upgrade → Razorpay checkout flow.
 
 **Wave 4 complete** — the two v0 AI hops, the cached PDF, and the Razorpay rail are all live behind
-their adapters; `mock`/stub remain the default. Deferred finishing touches (hosted checkout.js,
-signed storage URLs, the model bake-off) are in [`docs/roadmap.md`](docs/roadmap.md).
+their adapters; `mock`/stub remain the default. The hosted Razorpay Checkout.js flow + the Next.js
+`/auth/callback` code-exchange route landed in **`S-006` (Accepted)**. Remaining deferred finishing
+touches (signed storage URLs, the model bake-off) are in [`docs/roadmap.md`](docs/roadmap.md).
 
 ### Run it
 

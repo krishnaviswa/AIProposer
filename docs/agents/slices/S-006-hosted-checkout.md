@@ -4,8 +4,20 @@
 |---|---|
 | **Slice ID** | S-006 |
 | **Phase** | 2 AI + money |
-| **Status** | Specified |
+| **Status** | Accepted |
 | **Owner** | PM / 2026-08-29 |
+
+> **PM acceptance — 2026-08-30.** All 15 AC verified against `TR-S-006-hosted-checkout.md` (Tester
+> verdict "Ship", `s-006-hosted-checkout` @ `a5c64ff`): 13 fully automated, AC 2 and AC 12 automated
+> plus a pre-launch manual component (real Razorpay modal M-004, real Supabase OAuth M-005) — the
+> same posture accepted for S-004. Money invariant confirmed: the modal `amount` / `currency` are
+> passed verbatim from the `checkout-session` response (`amount` 50000, `currency` "INR"), nothing is
+> computed client-side, and the "₹500/mo" card is a display label sent nowhere. Webhook-authority
+> confirmed: the browser success handler shows a pending note and does a single `GET /v1/me` — no
+> optimistic plan flip, `plan_id` stays `free` until the HMAC webhook runs (AC 3 / AC 8). No LLM
+> import and no quota path in `billing/page.tsx` or `auth/callback/route.ts`; `mvp-spec.md` and
+> `docs/ai-touchpoints.md` byte-identical to `main`. No production bug. The one non-blocking nit
+> (README + roadmap status strings lagging the Builder commit) is resolved on acceptance.
 
 > **Pre-launch finishing touches deferred from Wave 4.** S-004 wired `POST /v1/billing/checkout-session`
 > and opens `window.Razorpay` *when* checkout.js and a real key happen to be present. This slice
@@ -118,16 +130,16 @@ verifying my email or using Google
 
 ## Definition of done (PM)
 
-- [ ] All 15 AC verified in the test report (Jest; Checkout.js + Supabase Auth stubbed/offline)
-- [ ] `NEXT_PUBLIC_RAZORPAY_KEY_ID` unset / mock key stays the CI default; no live Razorpay or
+- [x] All 15 AC verified in the test report (Jest; Checkout.js + Supabase Auth stubbed/offline)
+- [x] `NEXT_PUBLIC_RAZORPAY_KEY_ID` unset / mock key stays the CI default; no live Razorpay or
       Supabase keys in CI
-- [ ] The webhook remains the only thing that upgrades a plan; client success is UX only (AC 3, 8)
-- [ ] `docs/ai-touchpoints.md` + `mvp-spec.md` unchanged (verify `git diff --stat`)
-- [ ] `docs/architecture-sequences.md` §1 / §6 reflect the callback + hosted-script wording
-- [ ] `docs/roadmap.md` row updated; any new "later" idea filed there in the same PR
-- [ ] `README.md` wave/slice status table updated
-- [ ] Parity check passes (no SYNC_GROUP file touched)
-- [ ] PM `Status` set to **Accepted**
+- [x] The webhook remains the only thing that upgrades a plan; client success is UX only (AC 3, 8)
+- [x] `docs/ai-touchpoints.md` + `mvp-spec.md` unchanged (verify `git diff --stat`)
+- [x] `docs/architecture-sequences.md` §1 / §6 reflect the callback + hosted-script wording
+- [x] `docs/roadmap.md` row updated; any new "later" idea filed there in the same PR
+- [x] `README.md` wave/slice status table updated
+- [x] Parity check passes (no SYNC_GROUP file touched)
+- [x] PM `Status` set to **Accepted**
 
 ---
 
@@ -366,3 +378,4 @@ sequenceDiagram
 | 2026-08-29 | Architect | Wave-1 doc edits (lost in an earlier git tangle) re-done on branch `s-006-hosted-checkout`: `architecture-sequences.md` §1 (every sign-in path — Google, email-verify link, email/password — funnels through the redirect-only `/auth/callback`, always to `/`, `?error=`/failed-exchange → `/sign-in?error=…`, "No LLM. No quota." kept) + §6 (hosted Checkout.js via `next/script` on `/billing` only, amount straight from the `checkout-session` response, success = pending note + one `GET /v1/me` with no client-side plan flip, `modal.ondismiss` + `payment.failed` branches, missing/mock-key or script-load-failure → S-004 order-summary fallback, webhook-authority + "No LLM / no quota" notes kept); `roadmap.md` Checkout.js/`/auth/callback` row repointed to S-006 `planned` + new `deferred` rows for deep-link-back and near-real-time plan reflection + `idea` row for `GET /v1/plans`; `README.md` slice table row added. `architecture.md` unchanged (no container / trust-boundary / in-out change — `/auth/callback` is inside the existing Next.js container, FastAPI stays sole JWT verifier); `ai-touchpoints.md` unchanged (verified: "Sign in / session", "Create checkout session", "Billing webhook" rows all still `No / No`); `mvp-spec.md` untouched. **Status: Specified** |
 | 2026-08-29 | Builder | `frontend/src/app/auth/callback/route.ts` (NEW — `GET`: `@supabase/ssr` `exchangeCodeForSession` when `?code=`, else session check; 303 to `/` on success, `/sign-in?error=…` on `?error=`/throw, `/sign-in` when no code + no session; no `/v1` call, no domain logic) + `callback.test.ts` (6 tests). `sign-in/page.tsx` — Google `redirectTo` → `${origin}/auth/callback`; `signInWithPassword` success → `window.location.assign("/auth/callback")` hard-nav; reads `?error=` from the URL. `billing/page.tsx` — Checkout.js via `next/script` (`afterInteractive`, `onError` → fallback flag) on `/billing` only; `handler` → pending note + one `me.refetch()`; `modal.ondismiss` + `rzp.on("payment.failed")`; mock/placeholder key or script failure → S-004 order-summary fallback; modal amount taken verbatim from the `checkout-session` response. `sign-in.test.tsx` (NEW, 4 tests) + `billing.test.tsx` (+4: hosted success/dismiss/failed, fallback). No backend change. 25 frontend jest, tsc + `next build` green (`/auth/callback` = `ƒ` dynamic). |
 | 2026-08-29 | Tester | `TP-S-006` + `TR-S-006` written. Ran `npx jest` (25 → **28** after +3 Tester tests), `npx tsc --noEmit` (0), `npx next build` (9 routes, `/auth/callback` = `ƒ` dynamic), backend `pytest -q` (**61, unchanged from `main`**), `git diff main -- mvp-spec.md docs/ai-touchpoints.md` (**empty**). Tester tests added in the Builder's files: AC 1 source-scan (`checkout.razorpay.com` referenced by `billing/page.tsx` only — the "no other route" clause), AC 2 (`currency == "INR"` + exactly one `checkout` call — money invariant), AC 9 (route handler reads no `next`/`redirectTo` param; `?next=` present → still redirects to `/`). **15 / 15 AC mapped** — 13 automated, 2 automated + pre-launch manual (real Razorpay modal M-004, real Supabase OAuth M-005). No production bug. Non-blocking nit: `README.md` + `roadmap.md` status strings still read "Builder pending". **Recommendation: Ship.** |
+| 2026-08-30 | PM | Accepted. All 15 AC mapped in `TR-S-006` (13 automated, AC 2 + AC 12 automated + pre-launch manual M-004/M-005 — same posture as S-004). Money invariant covered — modal `amount`/`currency` passed verbatim from the `checkout-session` response (50000 / "INR"), nothing computed client-side. Webhook-authority covered — client success = pending note + one `GET /v1/me`, no client-side plan flip, `plan_id` stays `free` until the webhook runs (AC 3 / 8). `mvp-spec.md` + `docs/ai-touchpoints.md` byte-identical to `main`. Non-blocking nit resolved: `README.md` + `docs/roadmap.md` status wording refreshed to Builder-done / PM-Accepted. **Status: Accepted** |
