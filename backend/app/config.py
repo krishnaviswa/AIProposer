@@ -36,6 +36,14 @@ class Settings(BaseSettings):
     # JWKS key-set cache lifetime (RS256 path).
     supabase_jwks_cache_seconds: int = 600
 
+    # Phone OTP is an OPTIONAL sign-in method (ADR-003, roadmap `feature-flag`).
+    # Off by default and in CI. When off, a phone-only token (a `phone` claim and
+    # no `email`) is rejected 401 so turning it on is a deliberate switch. The SMS
+    # send itself is Supabase Auth's job (MSG91 provider for the India +91 rail);
+    # FastAPI still only verifies the JWT.
+    # Env var: AUTH_PHONE_OTP (field name == env name, like ai_provider/AI_PROVIDER).
+    auth_phone_otp: bool = False
+
     # --- Adapters: default to a no-network mock/local impl; opt in per env ---
     ai_provider: str = "mock"          # "mock" | "anthropic"
     payments_provider: str = "mock"    # "mock" | "razorpay"

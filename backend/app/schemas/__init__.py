@@ -56,7 +56,8 @@ class UsageOut(BaseModel):
 
 class MeView(BaseModel):
     id: uuid.UUID
-    email: str
+    email: str | None
+    phone: str | None = None
     name: str | None
     quote_currency: str
     hourly_rate_minor: int | None

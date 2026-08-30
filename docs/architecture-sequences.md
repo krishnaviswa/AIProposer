@@ -24,10 +24,11 @@ Participant legend: **U** freelancer (browser) · **W** Next.js · **A** FastAPI
 ## 1. Sign in → JWT on the API
 
 Per the AUTH OVERRIDE recorded in [`architecture.md`](architecture.md#auth-override-recorded-once-here-waves-24-inherit-this):
-**email/password (verified) + Google only.** No SMS OTP, no TOTP in v0.
+**email/password (verified) + Google.** Phone OTP is an optional method behind `AUTH_PHONE_OTP`
+(default off, off in CI — S-005, ADR-003). No TOTP in v0.
 
-Every sign-in path (Google OAuth, the email-verification link, **and** email/password) funnels through
-one Next.js `/auth/callback` route handler (S-006,
+Every sign-in path (Google OAuth, the email-verification link, email/password, **and** phone OTP when
+`AUTH_PHONE_OTP` is enabled) funnels through one Next.js `/auth/callback` route handler (S-006,
 [`ADR-004`](agents/adrs/ADR-004-auth-redirect-callback.md)). That handler does exactly two things — a
 Supabase `exchangeCodeForSession` when a `?code=` is present, then an HTTP redirect — **no `/v1` call,
 no domain logic.** v0 always redirects to `/` (no `next` / `redirectTo` param). A `?error=` param or a
@@ -53,6 +54,14 @@ sequenceDiagram
         Auth-->>CB: redirect to /auth/callback?code=...
     else Email verification link
         U->>CB: /auth/callback?code=... (from the email)
+    else Phone OTP — only when AUTH_PHONE_OTP is enabled
+        U->>W: phone number
+        W->>Auth: signInWithOtp({ phone })
+        Auth-->>U: SMS code (Supabase SMS provider, MSG91 for +91)
+        U->>W: 6-digit code
+        W->>Auth: verifyOtp({ phone, token })
+        Auth-->>W: session (phone claim, email claim may be absent)
+        W->>CB: hard nav to /auth/callback (no code, session cookie present)
     end
 
     opt ?code= present
@@ -70,12 +79,15 @@ sequenceDiagram
     A->>Auth: fetch JWKS (cached)
     A->>A: verify signature + exp + aud, take sub as user_id
     alt valid
+        A->>A: provision on first sight (email and/or phone claim)
         A-->>W: 200 { user, plan, usage }
     else invalid / expired
         A-->>W: 401 (client re-auths with Supabase)
+    else phone-only token while AUTH_PHONE_OTP is off
+        A-->>W: 401 (phone sign-in not enabled)
     end
 
-    Note over U,A: SMS / phone OTP rail and authenticator TOTP are NOT v0 — see roadmap.md
+    Note over U,A: Authenticator TOTP is NOT v0 — see roadmap.md. Phone OTP ships dark behind a flag.
 ```
 
 ---
